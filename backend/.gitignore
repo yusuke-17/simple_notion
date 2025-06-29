@@ -1,0 +1,31 @@
+# バイナリファイル
+main
+*.exe
+
+# Go関連
+vendor/
+*.mod
+*.sum
+
+# 環境変数
+.env
+.env.local
+
+# ログファイル
+*.log
+
+# テストカバレッジ
+coverage.out
+coverage.html
+
+# エディタ設定
+.vscode/
+.idea/
+
+# OS生成ファイル
+.DS_Store
+Thumbs.db
+
+# 一時ファイル
+tmp/
+temp/

@@ -1,0 +1,28 @@
+# 依存関係
+node_modules/
+.npm
+.pnpm-debug.log*
+pnpm-debug.log*
+
+# ビルド出力
+dist/
+build/
+
+# 環境変数
+.env
+.env.local
+.env.*.local
+
+# エディタ設定
+.vscode/
+.idea/
+
+# OS生成ファイル
+.DS_Store
+Thumbs.db
+
+# ログ
+*.log
+
+# テストカバレッジ
+coverage/

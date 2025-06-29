@@ -1,0 +1,26 @@
+# 環境変数
+.env
+.env.local
+.env.*.local
+
+# ログファイル
+*.log
+
+# エディタ設定
+.vscode/
+.idea/
+
+# OS生成ファイル
+.DS_Store
+Thumbs.db
+
+# 一時ファイル
+tmp/
+temp/
+
+# Docker関連
+.docker/
+
+# 開発時のファイル
+notes.md
+TODO.md
