@@ -1,0 +1,16 @@
+# バックエンド開発用Dockerfile
+FROM golang:1.23.3-alpine
+
+# 必要なツールをインストール
+RUN apk add --no-cache git
+
+WORKDIR /app
+
+# Go modulesをコピーして依存関係をダウンロード
+COPY go.mod go.sum ./
+RUN go mod download
+
+EXPOSE 8080
+
+# 開発時は直接go runを使用
+CMD ["go", "run", "./cmd/server"]

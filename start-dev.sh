@@ -10,27 +10,26 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
-# Dockerコンテナの起動
-echo "🐳 Dockerコンテナを起動中..."
-docker-compose up -d db
+# 既存のコンテナを停止
+echo "� 既存のコンテナを停止中..."
+docker-compose -f docker-compose.dev.yml down
 
-# データベースの起動待機
-echo "⏳ データベースの起動を待機中..."
-sleep 10
+# Dockerコンテナをビルド・起動
+echo "🐳 Dockerコンテナをビルド・起動中..."
+docker-compose -f docker-compose.dev.yml up --build -d
 
-# フロントエンドの依存関係インストール（まだ未完了の場合）
-if [ ! -d "frontend/node_modules" ]; then
-    echo "📦 フロントエンド依存関係をインストール中..."
-    cd frontend && npm install --legacy-peer-deps && cd ..
-fi
+echo "⏳ サービスの起動を待機中..."
+sleep 15
 
 echo "✅ 開発環境の準備が完了しました！"
 echo ""
-echo "次のコマンドで各サービスを起動してください："
-echo "  フロントエンド: cd frontend && npm run dev"
-echo "  バックエンド: cd backend && go run cmd/server/main.go"
-echo ""
 echo "アクセスURL："
-echo "  フロントエンド: http://localhost:5173"
-echo "  バックエンドAPI: http://localhost:8080"
-echo "  PostgreSQL: localhost:5432"
+echo "  🌐 フロントエンド: http://localhost:5173"
+echo "  🔗 バックエンドAPI: http://localhost:8080"
+echo "  🗄️ PostgreSQL: localhost:5432"
+echo ""
+echo "ログの確認："
+echo "  docker-compose -f docker-compose.dev.yml logs -f [service]"
+echo ""
+echo "サービス停止："
+echo "  docker-compose -f docker-compose.dev.yml down"

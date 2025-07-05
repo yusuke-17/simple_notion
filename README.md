@@ -5,11 +5,11 @@
 ## 技術スタック
 
 ### フロントエンド
-- **Svelte 5** + **TypeScript**
-- **Vite** (開発環境)
-- **Tailwind CSS** (スタイリング)
-- **Vitest** (テスト)
-- **page.js** (ルーティング)
+- **React v19** + **TypeScript**
+- **Vite** (ビルドツール)
+- **Tailwind CSS** + **shadcn/ui** (スタイリング・UIコンポーネント)
+- **Zustand** (状態管理)
+- **React Router v7** (ルーティング)
 
 ### バックエンド
 - **Go 1.23.3** (フレームワークなし)
