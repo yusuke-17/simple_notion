@@ -61,12 +61,33 @@ jobs:
       run: npm run build
 
     - name: Start dev server
-      run: npm run dev &
+      run: |
+        npm run dev &
+        DEV_PID=$!
+        echo "Started dev server with PID: $DEV_PID"
+        sleep 10
+        echo "Checking if process is still running..."
+        if ps -p $DEV_PID > /dev/null; then
+          echo "Dev server is running"
+        else
+          echo "Dev server has stopped"
+          exit 1
+        fi
       env:
         CI: true
 
+    - name: Check server status
+      run: |
+        echo "Checking port 5173..."
+        netstat -tuln | grep 5173 || echo "Port 5173 not found"
+        echo "Checking running processes..."
+        ps aux | grep -E "(node|vite)" | grep -v grep || echo "No Node/Vite processes found"
+
     - name: Wait for server
-      run: npx wait-on http://localhost:5173
+      run: |
+        echo "Waiting for server to be ready..."
+        npx wait-on http://localhost:5173 --timeout 60000 --interval 1000 --verbose
+      timeout-minutes: 2
 
     - name: Run Playwright tests
       run: npm run test:e2e

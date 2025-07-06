@@ -11,8 +11,9 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0',
+    host: process.env.CI ? '0.0.0.0' : 'localhost',
     port: 5173,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://backend:8080',
