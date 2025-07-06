@@ -13,8 +13,8 @@ export default defineConfig({
   },
   server: {
     host: process.env.CI ? '0.0.0.0' : 'localhost',
-    port: 5173,
-    strictPort: true,
+    port: parseInt(process.env.PORT || '5173'),
+    strictPort: false, // CI環境でポート競合を避けるため
     proxy: {
       '/api': {
         target: 'http://backend:8080',
