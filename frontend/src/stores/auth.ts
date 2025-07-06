@@ -97,9 +97,20 @@ export const useAuthStore = create<AuthStore>((set) => ({
           user: data.user,
           token: data.token
         })
+      } else {
+        // 認証失敗時は明示的にuser/tokenをnullに設定
+        set({
+          user: null,
+          token: null
+        })
       }
     } catch (error) {
       console.error('Auth check failed:', error)
+      // エラー時も明示的にuser/tokenをnullに設定
+      set({
+        user: null,
+        token: null
+      })
     }
   }
 }))

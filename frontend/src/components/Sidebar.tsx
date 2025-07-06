@@ -27,9 +27,14 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, showingSidebar, o
       if (response.ok) {
         const data = await response.json()
         setDocuments(data)
+      } else {
+        // エラー時は空配列を設定
+        setDocuments([])
       }
     } catch (error) {
       console.error('Failed to load documents:', error)
+      // エラー時は空配列を設定
+      setDocuments([])
     }
   }
 
@@ -41,9 +46,14 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, showingSidebar, o
       if (response.ok) {
         const data = await response.json()
         setTrashedDocuments(data)
+      } else {
+        // エラー時は空配列を設定
+        setTrashedDocuments([])
       }
     } catch (error) {
       console.error('Failed to load trashed documents:', error)
+      // エラー時は空配列を設定
+      setTrashedDocuments([])
     }
   }
 
