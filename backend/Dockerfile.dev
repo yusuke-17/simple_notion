@@ -1,16 +1,32 @@
 # バックエンド開発用Dockerfile
-FROM golang:1.23.3-alpine
+# セキュリティを重視しつつ開発効率を保つ
+FROM golang:1.23-alpine
 
-# 必要なツールをインストール
-RUN apk add --no-cache git
+# 最新のセキュリティパッチを適用
+RUN apk update && apk upgrade && \
+    apk add --no-cache git ca-certificates tzdata && \
+    rm -rf /var/cache/apk/*
+
+# 開発用ツールをインストール
+RUN go install github.com/cosmtrek/air@latest
+
+# non-rootユーザーを作成
+RUN addgroup -g 1001 -S appuser && \
+    adduser -S appuser -u 1001 -G appuser
 
 WORKDIR /app
 
+# ディレクトリの所有者を変更
+RUN chown -R appuser:appuser /app
+
+# non-rootユーザーに切り替え
+USER appuser
+
 # Go modulesをコピーして依存関係をダウンロード
-COPY go.mod go.sum ./
-RUN go mod download
+COPY --chown=appuser:appuser go.mod go.sum ./
+RUN go mod download && go mod verify
 
 EXPOSE 8080
 
-# 開発時は直接go runを使用
-CMD ["go", "run", "./cmd/server"]
+# Air設定ファイルがある場合はairを使用、なければgo runを使用
+CMD ["sh", "-c", "if [ -f .air.toml ]; then air; else go run ./cmd/server; fi"]

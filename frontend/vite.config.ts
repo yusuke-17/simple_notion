@@ -1,13 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { fileURLToPath } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "./src"),
+      "@": path.resolve(path.dirname(fileURLToPath(import.meta.url)), "./src"),
     },
   },
   server: {
@@ -21,6 +22,14 @@ export default defineConfig({
         secure: false,
       },
     },
+  },
+  define: {
+    // CI環境での互換性を改善
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    // CI環境での依存関係の最適化を改善
+    include: ['react', 'react-dom'],
   },
   preview: {
     host: '0.0.0.0',

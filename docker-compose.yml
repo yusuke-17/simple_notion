@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   db:
-    image: postgres:17
+    image: postgres:17-alpine
     environment:
       POSTGRES_DB: notion_app
       POSTGRES_USER: postgres
@@ -16,6 +16,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
 
   backend:
     build: 
@@ -30,9 +36,11 @@ services:
       DATABASE_URL: postgres://postgres:password@db:5432/notion_app?sslmode=disable
       JWT_SECRET: your-secret-key-change-in-production
       PORT: 8080
-    volumes:
-      - ./backend:/app
-    working_dir: /app
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
 
   frontend:
     build:
@@ -44,6 +52,13 @@ services:
       - backend
     environment:
       NODE_ENV: production
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
 
 volumes:
   postgres_data:
