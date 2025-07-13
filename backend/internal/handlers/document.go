@@ -7,9 +7,9 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/models"
 	"simple-notion-backend/internal/repository"
-	"simple-notion-backend/internal/middleware"
 )
 
 type DocumentHandler struct {

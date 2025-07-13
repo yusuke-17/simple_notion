@@ -237,7 +237,7 @@ func (r *DocumentRepository) MoveDocument(docID int, newParentID *int, userID in
 func (r *DocumentRepository) buildTree(documents []models.Document) []models.DocumentTreeNode {
 	// ルートドキュメント（parent_id = null）を特定
 	roots := make([]models.DocumentTreeNode, 0)
-	
+
 	for _, doc := range documents {
 		if doc.ParentID == nil {
 			node := models.DocumentTreeNode{
@@ -253,7 +253,7 @@ func (r *DocumentRepository) buildTree(documents []models.Document) []models.Doc
 
 func (r *DocumentRepository) buildChildren(parentID int, documents []models.Document) []models.DocumentTreeNode {
 	children := make([]models.DocumentTreeNode, 0)
-	
+
 	for _, doc := range documents {
 		if doc.ParentID != nil && *doc.ParentID == parentID {
 			child := models.DocumentTreeNode{
@@ -263,6 +263,6 @@ func (r *DocumentRepository) buildChildren(parentID int, documents []models.Docu
 			children = append(children, child)
 		}
 	}
-	
+
 	return children
 }
