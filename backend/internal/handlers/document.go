@@ -84,6 +84,7 @@ func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request)
 
 	var req struct {
 		Title    string `json:"title"`
+		Content  string `json:"content"`
 		ParentID *int   `json:"parent_id"`
 	}
 
@@ -92,10 +93,17 @@ func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// タイトルが空の場合はエラーを返す
+	if req.Title == "" {
+		http.Error(w, "Title is required", http.StatusBadRequest)
+		return
+	}
+
 	doc := &models.Document{
 		UserID:   userID,
 		ParentID: req.ParentID,
 		Title:    req.Title,
+		Content:  req.Content,
 	}
 
 	if err := h.docRepo.CreateDocument(doc); err != nil {
@@ -118,8 +126,9 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req struct {
-		Title  string         `json:"title"`
-		Blocks []models.Block `json:"blocks"`
+		Title   string         `json:"title"`
+		Content string         `json:"content"`
+		Blocks  []models.Block `json:"blocks"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -127,8 +136,8 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// ドキュメント更新
-	if err := h.docRepo.UpdateDocument(docID, userID, req.Title); err != nil {
+	// ドキュメント更新（titleとcontentの両方を更新）
+	if err := h.docRepo.UpdateDocument(docID, userID, req.Title, req.Content); err != nil {
 		http.Error(w, "Failed to update document", http.StatusInternalServerError)
 		return
 	}
@@ -139,7 +148,16 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// 更新されたドキュメントを取得して返す
+	updatedDoc, err := h.docRepo.GetDocumentWithBlocks(docID, userID)
+	if err != nil {
+		http.Error(w, "Failed to retrieve updated document", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(updatedDoc)
 }
 
 func (h *DocumentHandler) DeleteDocument(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +174,9 @@ func (h *DocumentHandler) DeleteDocument(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Document deleted successfully"})
 }
 
 func (h *DocumentHandler) RestoreDocument(w http.ResponseWriter, r *http.Request) {
@@ -186,7 +206,7 @@ func (h *DocumentHandler) MoveDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		NewParentID *int `json:"new_parent_id"`
+		NewParentID *int `json:"parent_id"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -199,5 +219,14 @@ func (h *DocumentHandler) MoveDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 移動されたドキュメントを取得して返す
+	movedDoc, err := h.docRepo.GetDocumentWithBlocks(docID, userID)
+	if err != nil {
+		http.Error(w, "Failed to retrieve moved document", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(movedDoc)
 }

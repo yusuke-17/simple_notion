@@ -6,13 +6,13 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 	_ "github.com/lib/pq"
+	"github.com/rs/cors"
 
-	"simple-notion-backend/internal/handlers"
-	"simple-notion-backend/internal/repository"
-	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/config"
+	"simple-notion-backend/internal/handlers"
+	"simple-notion-backend/internal/middleware"
+	"simple-notion-backend/internal/repository"
 )
 
 func main() {
@@ -46,6 +46,13 @@ func main() {
 
 	// ルーター設定
 	r := mux.NewRouter()
+
+	// ヘルスチェックエンドポイント
+	r.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+	}).Methods("GET")
 
 	// 認証不要エンドポイント
 	r.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")

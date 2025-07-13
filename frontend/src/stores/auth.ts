@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import type { AuthState } from '../types'
 
+// API base URL（テスト環境では環境変数から、そうでなければ相対パス）
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+
 interface AuthStore extends AuthState {
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, name: string) => Promise<void>
@@ -20,7 +23,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     set({ loading: true })
     
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -48,7 +51,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     set({ loading: true })
     
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name }),
@@ -73,7 +76,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   logout: async () => {
-    await fetch('/api/auth/logout', {
+    await fetch(`${API_BASE_URL}/api/auth/logout`, {
       method: 'POST',
       credentials: 'include'
     })
@@ -87,7 +90,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   checkAuth: async () => {
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
         credentials: 'include'
       })
       

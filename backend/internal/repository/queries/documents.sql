@@ -12,14 +12,14 @@ WHERE user_id = $1 AND is_deleted = false
 ORDER BY tree_path, sort_order;
 
 -- name: CreateDocument
-INSERT INTO documents (user_id, parent_id, title, created_at, updated_at)
-VALUES ($1, $2, $3, NOW(), NOW())
+INSERT INTO documents (user_id, parent_id, title, content, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW())
 RETURNING id, created_at, updated_at;
 
 -- name: UpdateDocument
 UPDATE documents 
-SET title = $1, updated_at = NOW()
-WHERE id = $2 AND user_id = $3;
+SET title = $1, content = $2, updated_at = NOW()
+WHERE id = $3 AND user_id = $4;
 
 -- name: SoftDeleteDocument
 UPDATE documents 

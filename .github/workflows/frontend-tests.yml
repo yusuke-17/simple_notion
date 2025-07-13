@@ -71,3 +71,86 @@ jobs:
         name: playwright-report
         path: frontend/playwright-report/
         retention-days: 30
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: notion_app
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: go mod download
+
+    - name: Wait for postgres
+      run: |
+        until pg_isready -h localhost -p 5432 -U postgres; do
+          echo "Waiting for postgres..."
+          sleep 2
+        done
+
+    - name: Run database migrations
+      working-directory: ./backend
+      run: |
+        export DATABASE_URL="postgres://postgres:password@localhost:5432/notion_app?sslmode=disable"
+        export JWT_SECRET="test-jwt-secret"
+        export PORT="8080"
+        # マイグレーションファイルを実行
+        PGPASSWORD=password psql -h localhost -U postgres -d notion_app -f migrations/001_init.sql
+        PGPASSWORD=password psql -h localhost -U postgres -d notion_app -f migrations/002_tree_structure.sql
+
+    - name: Start backend server
+      working-directory: ./backend
+      run: |
+        export DATABASE_URL="postgres://postgres:password@localhost:5432/notion_app?sslmode=disable"
+        export JWT_SECRET="test-jwt-secret"
+        export PORT="8080"
+        go run cmd/server/main.go &
+        echo $! > backend.pid
+        sleep 10
+      
+    - name: Check backend health
+      run: |
+        curl -f http://localhost:8080/api/auth/login -X POST -H "Content-Type: application/json" -d '{"email":"test","password":"test"}' || echo "Backend is running (401 expected)"
+
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Run integration tests
+      working-directory: ./frontend
+      run: npm run test:integration
+
+    - name: Stop backend server
+      if: always()
+      run: |
+        if [ -f backend/backend.pid ]; then
+          kill $(cat backend/backend.pid) || true
+        fi

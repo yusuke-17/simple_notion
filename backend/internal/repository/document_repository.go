@@ -120,20 +120,20 @@ func (r *DocumentRepository) CreateDocument(doc *models.Document) error {
 		return err
 	}
 
-	err = r.db.QueryRow(query, doc.UserID, doc.ParentID, doc.Title).Scan(
+	err = r.db.QueryRow(query, doc.UserID, doc.ParentID, doc.Title, doc.Content).Scan(
 		&doc.ID, &doc.CreatedAt, &doc.UpdatedAt,
 	)
 
 	return err
 }
 
-func (r *DocumentRepository) UpdateDocument(docID, userID int, title string) error {
+func (r *DocumentRepository) UpdateDocument(docID, userID int, title, content string) error {
 	query, err := r.queries.Get("UpdateDocument")
 	if err != nil {
 		return err
 	}
 
-	_, err = r.db.Exec(query, title, docID, userID)
+	_, err = r.db.Exec(query, title, content, docID, userID)
 	return err
 }
 
@@ -235,25 +235,34 @@ func (r *DocumentRepository) MoveDocument(docID int, newParentID *int, userID in
 
 // ツリー構造を構築
 func (r *DocumentRepository) buildTree(documents []models.Document) []models.DocumentTreeNode {
-	nodeMap := make(map[int]*models.DocumentTreeNode)
-	var roots []models.DocumentTreeNode
-
-	// 全ノードをマップに追加
-	for _, doc := range documents {
-		node := models.DocumentTreeNode{Document: doc, Children: []models.DocumentTreeNode{}}
-		nodeMap[doc.ID] = &node
-	}
-
-	// 親子関係を構築
+	// ルートドキュメント（parent_id = null）を特定
+	roots := make([]models.DocumentTreeNode, 0)
+	
 	for _, doc := range documents {
 		if doc.ParentID == nil {
-			roots = append(roots, *nodeMap[doc.ID])
-		} else {
-			if parent, exists := nodeMap[*doc.ParentID]; exists {
-				parent.Children = append(parent.Children, *nodeMap[doc.ID])
+			node := models.DocumentTreeNode{
+				Document: doc,
+				Children: r.buildChildren(doc.ID, documents),
 			}
+			roots = append(roots, node)
 		}
 	}
 
 	return roots
+}
+
+func (r *DocumentRepository) buildChildren(parentID int, documents []models.Document) []models.DocumentTreeNode {
+	children := make([]models.DocumentTreeNode, 0)
+	
+	for _, doc := range documents {
+		if doc.ParentID != nil && *doc.ParentID == parentID {
+			child := models.DocumentTreeNode{
+				Document: doc,
+				Children: r.buildChildren(doc.ID, documents),
+			}
+			children = append(children, child)
+		}
+	}
+	
+	return children
 }

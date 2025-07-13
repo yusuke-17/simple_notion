@@ -8,9 +8,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
+	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/models"
 	"simple-notion-backend/internal/repository"
-	"simple-notion-backend/internal/middleware"
 )
 
 type AuthHandler struct {
@@ -69,6 +69,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "auth_token",
 		Value:    tokenString,
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   false, // 開発環境用
 		SameSite: http.SameSiteLaxMode,
@@ -128,6 +129,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "auth_token",
 		Value:    tokenString,
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
@@ -146,6 +148,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "auth_token",
 		Value:    "",
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
