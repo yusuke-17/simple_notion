@@ -32,7 +32,7 @@ jobs:
       run: npm run lint
 
     - name: Run unit tests
-      run: npm run test
+      run: npm run test:coverage
 
     - name: Upload frontend test coverage
       if: always()
@@ -77,4 +77,43 @@ jobs:
         path: |
           backend/coverage.out
           backend/coverage.html
+        retention-days: 7
+
+  docker-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build backend Docker image for testing
+      run: |
+        docker build -f backend/Dockerfile.dev -t backend-test:latest backend/
+
+    - name: Run backend tests in Docker
+      run: |
+        docker run --rm -v ${{ github.workspace }}/backend:/app -w /app backend-test:latest \
+          sh -c "go test -v -race -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html"
+
+    - name: Build frontend Docker image for testing
+      run: |
+        docker build -f frontend/Dockerfile.dev -t frontend-test:latest frontend/
+
+    - name: Run frontend tests in Docker
+      run: |
+        docker run --rm -v ${{ github.workspace }}/frontend:/app -w /app frontend-test:latest \
+          npm run test:coverage
+
+    - name: Upload Docker test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-test-results
+        path: |
+          backend/coverage.out
+          backend/coverage.html
+          frontend/coverage/
         retention-days: 7

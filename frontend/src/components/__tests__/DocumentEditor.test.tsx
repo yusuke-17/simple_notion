@@ -10,13 +10,24 @@ const mockDocument = {
   id: 1,
   title: 'Test Document',
   content: 'Test content',
-  created_at: '2023-01-01T00:00:00Z',
-  updated_at: '2023-01-01T00:00:00Z',
+  parentId: null,
+  userId: 1,
+  createdAt: '2023-01-01T00:00:00Z',
+  updatedAt: '2023-01-01T00:00:00Z',
 }
+
+// カスタムイベントのモック
+const mockDispatchEvent = vi.fn()
+Object.defineProperty(window, 'dispatchEvent', {
+  value: mockDispatchEvent,
+  writable: true,
+})
 
 describe('DocumentEditor Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockDispatchEvent.mockClear()
+    
     // デフォルトのfetchモックを設定
     ;(fetch as MockedFunction<typeof fetch>).mockResolvedValue({
       ok: true,
@@ -35,6 +46,16 @@ describe('DocumentEditor Component', () => {
     expect(fetch).toHaveBeenCalledWith('/api/documents/1', {
       credentials: 'include'
     })
+  })
+
+  it('ローディング中は適切な表示がされる', () => {
+    ;(fetch as MockedFunction<typeof fetch>).mockImplementation(
+      () => new Promise(() => {}) // 永続的にpendingにする
+    )
+    
+    render(<DocumentEditor documentId={1} />)
+    
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
   it('タイトルを編集できる', async () => {
@@ -115,6 +136,7 @@ describe('DocumentEditor Component', () => {
 
   it('削除ボタンをクリックするとドキュメントが削除される', async () => {
     const user = userEvent.setup()
+    global.confirm = vi.fn().mockReturnValue(true)
     
     // 削除用のfetchモックを設定
     ;(fetch as MockedFunction<typeof fetch>).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
@@ -134,16 +156,88 @@ describe('DocumentEditor Component', () => {
       expect(screen.getByDisplayValue('Test Document')).toBeInTheDocument()
     })
     
-    // 削除ボタンはtrashアイコンを含む2番目のボタン
-    const buttons = screen.getAllByRole('button')
-    const deleteButton = buttons[1] // 2番目のボタンが削除ボタン
+    // 削除ボタン（Trash2アイコンを含むボタン）を見つける
+    const deleteButton = screen.getByRole('button', { name: '' }) // アイコンボタンなので名前がない
     await user.click(deleteButton)
     
     await waitFor(() => {
-      expect(fetch).toHaveBeenLastCalledWith('/api/documents/1', {
+      expect(fetch).toHaveBeenCalledWith('/api/documents/1', {
         method: 'DELETE',
         credentials: 'include',
       })
     })
+    
+    expect(mockDispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'document-deleted',
+        detail: { documentId: 1 }
+      })
+    )
+  })
+
+  it('削除確認ダイアログでキャンセルした場合は削除されない', async () => {
+    const user = userEvent.setup()
+    global.confirm = vi.fn().mockReturnValue(false)
+    
+    render(<DocumentEditor documentId={1} />)
+    
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Test Document')).toBeInTheDocument()
+    })
+    
+    const deleteButton = screen.getByRole('button', { name: '' })
+    await user.click(deleteButton)
+    
+    // 削除APIが呼ばれないことを確認
+    expect(fetch).not.toHaveBeenCalledWith('/api/documents/1', {
+      method: 'DELETE',
+      credentials: 'include',
+    })
+  })
+
+  it('ドキュメント読み込みエラー時の処理', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    
+    ;(fetch as MockedFunction<typeof fetch>).mockRejectedValue(new Error('Network error'))
+    
+    render(<DocumentEditor documentId={1} />)
+    
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to load document:', expect.any(Error))
+    })
+    
+    consoleSpy.mockRestore()
+  })
+
+  it('保存エラー時の処理', async () => {
+    const user = userEvent.setup()
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    
+    // 最初の読み込みは成功、保存時にエラー
+    ;(fetch as MockedFunction<typeof fetch>).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('/api/documents/1') && init?.method === 'PUT') {
+        return Promise.reject(new Error('Save failed'))
+      }
+      return Promise.resolve({
+        ok: true,
+        json: vi.fn().mockResolvedValue(mockDocument),
+      } as unknown as Response)
+    })
+    
+    render(<DocumentEditor documentId={1} />)
+    
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Test Document')).toBeInTheDocument()
+    })
+    
+    const saveButton = screen.getByRole('button', { name: /save/i })
+    await user.click(saveButton)
+    
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to save document:', expect.any(Error))
+    })
+    
+    consoleSpy.mockRestore()
   })
 })

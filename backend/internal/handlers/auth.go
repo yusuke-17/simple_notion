@@ -13,12 +13,28 @@ import (
 	"simple-notion-backend/internal/repository"
 )
 
+// UserRepositoryInterface defines the interface for user repository operations
+type UserRepositoryInterface interface {
+	GetByEmail(email string) (*models.User, error)
+	GetByID(id int) (*models.User, error)
+	Create(user *models.User) error
+	Update(user *models.User) error
+}
+
 type AuthHandler struct {
-	userRepo  *repository.UserRepository
+	userRepo  UserRepositoryInterface
 	jwtSecret []byte
 }
 
-func NewAuthHandler(userRepo *repository.UserRepository, jwtSecret []byte) *AuthHandler {
+func NewAuthHandler(userRepo UserRepositoryInterface, jwtSecret []byte) *AuthHandler {
+	return &AuthHandler{
+		userRepo:  userRepo,
+		jwtSecret: jwtSecret,
+	}
+}
+
+// NewAuthHandlerFromRepo creates an AuthHandler with a concrete repository
+func NewAuthHandlerFromRepo(userRepo *repository.UserRepository, jwtSecret []byte) *AuthHandler {
 	return &AuthHandler{
 		userRepo:  userRepo,
 		jwtSecret: jwtSecret,
