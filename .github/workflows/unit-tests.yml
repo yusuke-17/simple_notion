@@ -1,4 +1,4 @@
-name: Unit Tests
+name: CI/CD Pipeline
 
 on:
   push:
@@ -79,8 +79,9 @@ jobs:
           backend/coverage.html
         retention-days: 7
 
-  docker-tests:
+  docker-integration-tests:
     runs-on: ubuntu-latest
+    needs: [frontend-tests, backend-tests]  # 基本テストが成功した場合のみ実行
     
     steps:
     - name: Checkout code
@@ -89,31 +90,21 @@ jobs:
     - name: Setup Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build backend Docker image for testing
+    - name: Test Docker builds
       run: |
+        # Dockerイメージのビルドテストのみ実行（テスト重複を避ける）
+        echo "Testing backend Docker build..."
         docker build -f backend/Dockerfile.dev -t backend-test:latest backend/
-
-    - name: Run backend tests in Docker
-      run: |
-        docker run --rm -v ${{ github.workspace }}/backend:/app -w /app backend-test:latest \
-          sh -c "go test -v -race -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html"
-
-    - name: Build frontend Docker image for testing
-      run: |
+        
+        echo "Testing frontend Docker build..."
         docker build -f frontend/Dockerfile.dev -t frontend-test:latest frontend/
+        
+        echo "Testing production Docker builds..."
+        docker build -f backend/Dockerfile -t backend-prod:latest backend/
+        docker build -f frontend/Dockerfile -t frontend-prod:latest frontend/
 
-    - name: Run frontend tests in Docker
+    - name: Test Docker Compose setup
       run: |
-        docker run --rm -v ${{ github.workspace }}/frontend:/app -w /app frontend-test:latest \
-          npm run test:coverage
-
-    - name: Upload Docker test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: docker-test-results
-        path: |
-          backend/coverage.out
-          backend/coverage.html
-          frontend/coverage/
-        retention-days: 7
+        # Docker Composeの設定テスト
+        docker-compose -f docker-compose.yml config
+        docker-compose -f docker-compose.dev.yml config
