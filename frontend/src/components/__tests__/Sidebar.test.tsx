@@ -88,7 +88,7 @@ describe('Sidebar Component', () => {
     })
   })
 
-  it('サイドバーが表示されないとき（showingSidebar=false）は何も表示されない', () => {
+  it('サイドバーが表示されないとき（showingSidebar=false）は何も表示されない', async () => {
     render(
       <Sidebar
         {...defaultProps}
@@ -97,6 +97,11 @@ describe('Sidebar Component', () => {
     )
     
     expect(screen.queryByText('Documents')).not.toBeInTheDocument()
+    
+    // 非同期処理の完了を待つ
+    await waitFor(() => {
+      expect(screen.queryByText('Documents')).not.toBeInTheDocument()
+    })
   })
 
   it('サイドバーが正しくレンダリングされる', async () => {
@@ -121,9 +126,11 @@ describe('Sidebar Component', () => {
       expect(screen.getByText('Second Document')).toBeInTheDocument()
     })
     
-    // 日付も表示されることを確認 (年/月/日 フォーマットで表示される)
-    expect(screen.getByText('2023/1/1')).toBeInTheDocument()
-    expect(screen.getByText('2023/1/2')).toBeInTheDocument()
+    // 日付も表示されることを確認 (実際の出力形式に合わせる)
+    await waitFor(() => {
+      expect(screen.getByText('2023/1/1')).toBeInTheDocument()
+      expect(screen.getByText('2023/1/2')).toBeInTheDocument()
+    })
   })
 
   it('現在選択されているドキュメントがハイライトされる', async () => {
