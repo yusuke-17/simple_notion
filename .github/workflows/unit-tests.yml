@@ -60,8 +60,33 @@ jobs:
       with:
         go-version: '1.21'
 
+    - name: Verify Go module files
+      run: |
+        pwd
+        ls -la
+        echo "Checking for go.mod file..."
+        if [ -f "go.mod" ]; then
+          echo "✅ go.mod found"
+          cat go.mod
+        else
+          echo "❌ go.mod not found"
+          echo "Files in current directory:"
+          ls -la
+        fi
+        if [ -f "go.sum" ]; then
+          echo "✅ go.sum found"
+        else
+          echo "❌ go.sum not found"
+        fi
+
     - name: Install dependencies
-      run: go mod download
+      run: |
+        if [ -f "go.mod" ]; then
+          go mod download
+        else
+          echo "Error: go.mod file not found. Please ensure go.mod and go.sum are committed to the repository."
+          exit 1
+        fi
 
     - name: Run Go unit tests
       run: go test -v -race -coverprofile=coverage.out ./...

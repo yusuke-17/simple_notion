@@ -4,8 +4,8 @@ main
 
 # Go関連
 vendor/
-*.mod
-*.sum
+# *.mod
+# *.sum
 
 # 環境変数
 .env

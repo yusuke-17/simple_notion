@@ -170,7 +170,11 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, showingSidebar, o
                   {doc.title || 'Untitled'}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {new Date(doc.updatedAt).toLocaleDateString()}
+                  {new Date(doc.updatedAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric'
+                  })}
                 </div>
                 
                 {showingTrash && (

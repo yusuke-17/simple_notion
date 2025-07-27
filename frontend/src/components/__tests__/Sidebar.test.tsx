@@ -126,10 +126,10 @@ describe('Sidebar Component', () => {
       expect(screen.getByText('Second Document')).toBeInTheDocument()
     })
     
-    // 日付も表示されることを確認 (実際の出力形式に合わせる)
+    // 日付も表示されることを確認 (統一されたフォーマット M/D/YYYY)
     await waitFor(() => {
-      expect(screen.getByText('2023/1/1')).toBeInTheDocument()
-      expect(screen.getByText('2023/1/2')).toBeInTheDocument()
+      expect(screen.getByText('1/1/2023')).toBeInTheDocument()
+      expect(screen.getByText('1/2/2023')).toBeInTheDocument()
     })
   })
 
