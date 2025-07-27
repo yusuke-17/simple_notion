@@ -11,12 +11,12 @@ if [ ! -f .env ]; then
 fi
 
 # 既存のコンテナを停止
-echo "� 既存のコンテナを停止中..."
-docker-compose -f docker-compose.dev.yml down
+echo "🛑 既存のコンテナを停止中..."
+docker compose -f docker-compose.dev.yml down
 
 # Dockerコンテナをビルド・起動
 echo "🐳 Dockerコンテナをビルド・起動中..."
-docker-compose -f docker-compose.dev.yml up --build -d
+docker compose -f docker-compose.dev.yml up --build -d
 
 echo "⏳ サービスの起動を待機中..."
 sleep 15
@@ -29,7 +29,7 @@ echo "  🔗 バックエンドAPI: http://localhost:8080"
 echo "  🗄️ PostgreSQL: localhost:5432"
 echo ""
 echo "ログの確認："
-echo "  docker-compose -f docker-compose.dev.yml logs -f [service]"
+echo "  docker compose -f docker-compose.dev.yml logs -f [service]"
 echo ""
 echo "サービス停止："
-echo "  docker-compose -f docker-compose.dev.yml down"
+echo "  docker compose -f docker-compose.dev.yml down"
