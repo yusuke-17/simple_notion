@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Save, Trash2 } from 'lucide-react'
+import { Save } from 'lucide-react'
 import type { Document } from '@/types'
 
 interface DocumentEditorProps {
@@ -62,24 +62,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     }
   }, [document, documentId, title, content])
 
-  const deleteDocument = async () => {
-    if (!document) return
-    if (!confirm('Move this document to trash?')) return
-
-    try {
-      await fetch(`/api/documents/${documentId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      })
-      // Trigger document list refresh and clear current document
-      window.dispatchEvent(new CustomEvent('document-deleted', { 
-        detail: { documentId } 
-      }))
-    } catch (error) {
-      console.error('Failed to delete document:', error)
-    }
-  }
-
   // Auto-save functionality
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -126,14 +108,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
             >
               <Save className="h-4 w-4 mr-2" />
               {isSaving ? 'Saving...' : 'Save'}
-            </Button>
-            
-            <Button
-              onClick={deleteDocument}
-              variant="outline"
-              size="sm"
-            >
-              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>

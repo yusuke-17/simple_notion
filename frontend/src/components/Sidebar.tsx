@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Menu, Plus, Trash2 } from 'lucide-react'
+import { Menu, Plus, Trash2, X } from 'lucide-react'
 import type { Document } from '@/types'
 
 interface SidebarProps {
   currentDocumentId: number | null
   onDocumentSelect: (documentId: number) => void
+  onDocumentDelete: (documentId: number) => void
   showingSidebar: boolean
   onToggleSidebar: () => void
 }
 
-export function Sidebar({ currentDocumentId, onDocumentSelect, showingSidebar, onToggleSidebar }: SidebarProps) {
+export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete, showingSidebar, onToggleSidebar }: SidebarProps) {
   const [documents, setDocuments] = useState<Document[]>([])
   const [showingTrash, setShowingTrash] = useState(false)
   const [trashedDocuments, setTrashedDocuments] = useState<Document[]>([])
+  const [hoveredDocId, setHoveredDocId] = useState<number | null>(null)
 
   useEffect(() => {
     loadDocuments()
@@ -77,6 +79,26 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, showingSidebar, o
       }
     } catch (error) {
       console.error('Failed to create document:', error)
+    }
+  }
+
+  const deleteDocument = async (docId: number, event: React.MouseEvent) => {
+    event.stopPropagation()
+    if (!confirm('Move this document to trash?')) return
+
+    try {
+      await fetch(`/api/documents/${docId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+      
+      // ドキュメントリストを更新
+      await loadDocuments()
+      
+      // 削除されたドキュメントが現在表示中の場合、前のドキュメントを表示
+      onDocumentDelete(docId)
+    } catch (error) {
+      console.error('Failed to delete document:', error)
     }
   }
 
@@ -159,14 +181,16 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, showingSidebar, o
             {(showingTrash ? trashedDocuments : documents).map((doc) => (
               <div
                 key={doc.id}
-                className={`p-2 rounded-md cursor-pointer transition-colors ${
+                className={`p-2 rounded-md cursor-pointer transition-colors relative group ${
                   currentDocumentId === doc.id
                     ? 'bg-blue-100 text-blue-900'
                     : 'hover:bg-gray-100'
                 }`}
                 onClick={() => !showingTrash && onDocumentSelect(doc.id)}
+                onMouseEnter={() => setHoveredDocId(doc.id)}
+                onMouseLeave={() => setHoveredDocId(null)}
               >
-                <div className="text-sm font-medium truncate">
+                <div className="text-sm font-medium truncate pr-8">
                   {doc.title || 'Untitled'}
                 </div>
                 <div className="text-xs text-gray-500">
@@ -176,6 +200,18 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, showingSidebar, o
                     day: 'numeric'
                   })}
                 </div>
+                
+                {/* 通常のドキュメントの削除ボタン（ホバー時表示） */}
+                {!showingTrash && hoveredDocId === doc.id && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => deleteDocument(doc.id, e)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
                 
                 {showingTrash && (
                   <div className="mt-2 flex space-x-2">

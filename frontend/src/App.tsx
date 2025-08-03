@@ -2,30 +2,87 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/auth'
 import { Login } from '@/components/Login'
 import { Sidebar } from '@/components/Sidebar'
-import { DocumentEditor } from '@/components/DocumentEditor'
+import { DocumentEditor } from '@/components/DocumentEditor'  
 import { Button } from '@/components/ui/button'
-import { Menu } from 'lucide-react'
+import { Menu, Plus } from 'lucide-react'
+import type { Document } from '@/types'
 
 function App() {
   const { user, checkAuth, logout } = useAuthStore()
   const [currentDocumentId, setCurrentDocumentId] = useState<number | null>(null)
   const [showingSidebar, setShowingSidebar] = useState(true)
+  const [documents, setDocuments] = useState<Document[]>([])
 
   useEffect(() => {
     checkAuth()
   }, [checkAuth])
 
   useEffect(() => {
-    // Listen for document deletion events
-    const handleDocumentDeleted = (e: CustomEvent) => {
-      if (e.detail.documentId === currentDocumentId) {
+    if (user) {
+      loadDocuments()
+    }
+  }, [user])
+
+  const loadDocuments = async () => {
+    try {
+      const response = await fetch('/api/documents', {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setDocuments(data)
+      } else {
+        setDocuments([])
+      }
+    } catch (error) {
+      console.error('Failed to load documents:', error)
+      setDocuments([])
+    }
+  }
+
+  const handleDocumentDelete = (deletedDocumentId: number) => {
+    if (deletedDocumentId === currentDocumentId) {
+      // 削除されたドキュメントが現在表示中の場合
+      const currentIndex = documents.findIndex(doc => doc.id === deletedDocumentId)
+      
+      if (currentIndex > 0) {
+        // 前のドキュメントを表示
+        setCurrentDocumentId(documents[currentIndex - 1].id)
+      } else if (documents.length > 1) {
+        // 最初のドキュメントが削除された場合、次のドキュメント（新しい最初）を表示
+        setCurrentDocumentId(documents[1].id)
+      } else {
+        // ドキュメントが1個しかない場合、初期画面を表示
         setCurrentDocumentId(null)
       }
     }
+    
+    // ドキュメントリストを更新
+    loadDocuments()
+  }
 
-    window.addEventListener('document-deleted', handleDocumentDeleted as EventListener)
-    return () => window.removeEventListener('document-deleted', handleDocumentDeleted as EventListener)
-  }, [currentDocumentId])
+  const createDocument = async () => {
+    try {
+      const response = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Untitled',
+          content: '',
+          parentId: null
+        }),
+        credentials: 'include'
+      })
+      
+      if (response.ok) {
+        const newDoc = await response.json()
+        await loadDocuments()
+        setCurrentDocumentId(newDoc.id)
+      }
+    } catch (error) {
+      console.error('Failed to create document:', error)
+    }
+  }
 
   if (!user) {
     return <Login />
@@ -36,6 +93,7 @@ function App() {
       <Sidebar
         currentDocumentId={currentDocumentId}
         onDocumentSelect={setCurrentDocumentId}
+        onDocumentDelete={handleDocumentDelete}
         showingSidebar={showingSidebar}
         onToggleSidebar={() => setShowingSidebar(!showingSidebar)}
       />
@@ -86,7 +144,11 @@ function App() {
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                <p className="text-lg">Select a document to start editing</p>
+                <p className="text-lg mb-4">No documents yet</p>
+                <Button onClick={createDocument}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create your first document
+                </Button>
               </div>
             </div>
           )}
