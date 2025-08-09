@@ -9,6 +9,7 @@
 # エディタ設定
 .vscode/
 .idea/
+.serena/
 
 # OS生成ファイル
 .DS_Store

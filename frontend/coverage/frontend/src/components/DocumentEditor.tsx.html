@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95.9% </span>
+                <span class="strong">96.03% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>117/122</span>
+                <span class='fraction'>121/126</span>
             </div>
         
             
@@ -39,14 +39,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>5/5</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95.9% </span>
+                <span class="strong">96.03% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>117/122</span>
+                <span class='fraction'>121/126</span>
             </div>
         
             
@@ -216,7 +216,13 @@
 <a name='L151'></a><a href='#L151'>151</a>
 <a name='L152'></a><a href='#L152'>152</a>
 <a name='L153'></a><a href='#L153'>153</a>
-<a name='L154'></a><a href='#L154'>154</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -282,6 +288,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">64x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
@@ -290,13 +298,16 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">64x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">64x</span>
@@ -346,6 +357,7 @@
 <span class="cline-any cline-yes">64x</span>
 <span class="cline-any cline-yes">64x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">64x</span>
 <span class="cline-any cline-yes">64x</span>
 <span class="cline-any cline-yes">64x</span>
 <span class="cline-any cline-yes">64x</span>
@@ -433,23 +445,28 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     }
   }, [document, documentId, title, content])
 &nbsp;
-  const deleteDocument = async () =&gt; {
+  const deleteDocument = useCallback(async () =&gt; {
     if (!document) <span class="branch-0 cbranch-no" title="branch not covered" >return</span>
-    if (!confirm('Move this document to trash?')) return
+&nbsp;
+    const confirmed = window.confirm('Are you sure you want to delete this document?')
+    if (!confirmed) return
 &nbsp;
     try {
-      await fetch(`/api/documents/${documentId}`, {
+      const response = await fetch(`/api/documents/${documentId}`, {
         method: 'DELETE',
         credentials: 'include'
       })
-      // Trigger document list refresh and clear current document
-      window.dispatchEvent(new CustomEvent('document-deleted', { 
-        detail: { documentId } 
-      }))
+&nbsp;
+      if (response.ok) {
+        // Trigger document deletion event
+        window.dispatchEvent(new CustomEvent('document-deleted', {
+          detail: { documentId }
+        }))
+      }
 <span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error) {</span>
 <span class="cstat-no" title="statement not covered" >      console.error('Failed to delete document:', error)</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
-  }
+  }, [document, documentId])
 &nbsp;
   // Auto-save functionality
   useEffect(() =&gt; {
@@ -498,11 +515,12 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
               &lt;Save className="h-4 w-4 mr-2" /&gt;
               {isSaving ? 'Saving...' : 'Save'}
             &lt;/Button&gt;
-            
+&nbsp;
             &lt;Button
               onClick={deleteDocument}
               variant="outline"
               size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
             &gt;
               &lt;Trash2 className="h-4 w-4" /&gt;
             &lt;/Button&gt;
@@ -529,7 +547,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-07-27T01:38:53.699Z
+                at 2025-08-09T03:08:34.953Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>
