@@ -61,6 +61,5 @@ build
 
 # Development files
 README.md
-README_REACT.md
 .git
 .gitignore

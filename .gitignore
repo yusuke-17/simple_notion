@@ -25,3 +25,11 @@ temp/
 # 開発時のファイル
 notes.md
 TODO.md
+
+# 開発時の一時ファイル
+cookies.txt
+**/cookies.txt
+
+# テストカバレッジ
+coverage/
+**/coverage/

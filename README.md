@@ -39,13 +39,30 @@ git clone <repository-url>
 cd simple_notion
 ```
 
-### 2. Docker Composeで起動
+### 2. 開発環境のセットアップ
+
+#### 環境変数の設定
+```bash
+# 環境変数ファイルをコピー
+cp .env.example .env
+```
+
+#### Docker Composeで起動
 ```bash
 # 全サービスを一括起動
+make up
+# または
 docker-compose up -d
 
 # ログを確認
 docker-compose logs -f
+
+# その他の便利なコマンド
+make stop          # サービス停止
+make restart       # サービス再起動
+make logs          # ログ表示
+make ps            # コンテナ状況確認
+make clean         # コンテナとイメージの削除
 ```
 
 ### 3. 個別に開発する場合
@@ -117,22 +134,26 @@ go test ./...
 
 ```
 simple_notion/
-├── frontend/                # Svelteアプリケーション
+├── frontend/                # React + TypeScript アプリケーション
 │   ├── src/
-│   │   ├── components/     # Svelteコンポーネント
-│   │   ├── stores/         # 状態管理
+│   │   ├── components/     # React コンポーネント
+│   │   ├── stores/         # 状態管理 (Zustand)
+│   │   ├── types/          # TypeScript 型定義
 │   │   └── tests/          # テストファイル
 │   └── package.json
-├── backend/                # Goアプリケーション
+├── backend/                # Go アプリケーション
 │   ├── cmd/server/         # エントリーポイント
 │   ├── internal/
-│   │   ├── handlers/       # HTTPハンドラー
+│   │   ├── handlers/       # HTTP ハンドラー
 │   │   ├── models/         # データモデル
 │   │   ├── repository/     # データアクセス層
-│   │   └── middleware/     # ミドルウェア
+│   │   ├── middleware/     # ミドルウェア
+│   │   └── config/         # 設定管理
 │   ├── migrations/         # データベースマイグレーション
 │   └── go.mod
-└── docker-compose.yml      # 開発環境設定
+├── docker-compose.yml      # 本番環境設定
+├── docker-compose.dev.yml  # 開発環境設定
+└── Makefile               # 開発用タスク
 ```
 
 ## 開発のポイント
