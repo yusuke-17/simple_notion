@@ -1,6 +1,6 @@
 # バックエンド用Dockerfile
 # より安全なビルド環境
-FROM golang:1.24-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # セキュリティアップデートと最小限のツールを追加
 RUN apk update && apk upgrade && \
@@ -16,8 +16,8 @@ RUN go mod download && go mod verify
 # ソースコードをコピー
 COPY . .
 
-# セキュリティ強化されたバイナリをビルド
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+# セキュリティ強化されたバイナリをビルド（アーキテクチャを自動検出）
+RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
     -trimpath \

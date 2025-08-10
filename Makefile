@@ -78,6 +78,35 @@ rebuild:
 	docker-compose build --no-cache
 	docker-compose up -d
 
+# トラブルシューティング用コマンド
+troubleshoot:
+	@echo "=== 502 Bad Gateway トラブルシューティング ==="
+	@echo "1. サービス状態の確認:"
+	docker-compose ps
+	@echo "\n2. バックエンドのヘルスチェック:"
+	@curl -f http://localhost:8080/api/health || echo "❌ バックエンドに接続できません"
+	@echo "\n3. 環境変数の確認:"
+	@echo "VITE_API_BASE_URL=$(shell grep VITE_API_BASE_URL frontend/.env 2>/dev/null || echo '未設定')"
+	@echo "\n4. ポートの使用状況:"
+	@lsof -ti :3000,8080,5432 2>/dev/null && echo "ポート競合の可能性があります" || echo "ポートは空いています"
+
+# ログの詳細確認
+logs-detailed:
+	@echo "=== フロントエンドログ ==="
+	docker-compose logs --tail=20 frontend
+	@echo "\n=== バックエンドログ ==="
+	docker-compose logs --tail=20 backend
+	@echo "\n=== データベースログ ==="
+	docker-compose logs --tail=20 db
+
+# 環境変数の確認
+check-env:
+	@echo "=== 環境変数の確認 ==="
+	@echo "Frontend (.env):"
+	@cat frontend/.env 2>/dev/null || echo "frontend/.envが見つかりません"
+	@echo "\nRoot (.env):"
+	@cat .env 2>/dev/null || echo "ルートの.envが見つかりません"
+
 # ヘルプ
 help:
 	@echo "利用可能なコマンド:"
@@ -99,3 +128,6 @@ help:
 	@echo "  clean-light  - 軽量な削除（ボリュームは保持）"
 	@echo "  clean-containers - コンテナのみ削除（イメージとボリュームは保持）"
 	@echo "  rebuild      - 強制リビルド"
+	@echo "  troubleshoot - 502エラーのトラブルシューティング"
+	@echo "  logs-detailed - 詳細ログの確認"
+	@echo "  check-env    - 環境変数の確認"

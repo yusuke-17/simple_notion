@@ -168,6 +168,61 @@ simple_notion/
 - パスワードハッシュ化（bcrypt）
 - CORS設定
 
+## トラブルシューティング
+
+### 502 Bad Gateway エラー
+ログイン画面で502エラーが発生する場合：
+
+#### 1. 環境変数の確認
+```bash
+# フロントエンド/.envファイルの確認
+cat frontend/.env
+# VITE_API_BASE_URL=http://localhost:8080 が設定されているか確認
+```
+
+#### 2. バックエンドの稼働確認
+```bash
+# バックエンドのヘルスチェック
+curl http://localhost:8080/api/health
+
+# Docker環境での確認
+docker compose logs backend
+```
+
+#### 3. サービス間通信の確認
+```bash
+# 全サービスの状態確認
+docker compose ps
+
+# nginxログの確認
+docker compose logs frontend
+```
+
+#### 4. 一般的な解決方法
+1. **Docker環境の再起動**
+   ```bash
+   docker compose down
+   docker compose up --build -d
+   ```
+
+2. **ポート競合の確認**
+   ```bash
+   lsof -i :3000,8080,5432
+   ```
+
+3. **ブラウザのキャッシュクリア**
+   - 開発者ツール > Network > Disable cache
+
+### 開発時のよくある問題
+
+#### フロントエンドがバックエンドに接続できない
+- `VITE_API_BASE_URL`が正しく設定されているか確認
+- CORSエラーの場合は、バックエンドのCORS設定を確認
+
+#### データベース接続エラー
+- PostgreSQLが起動しているか確認
+- `DATABASE_URL`の設定が正しいか確認
+
 ## ライセンス
 
 MIT License

@@ -32,7 +32,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
       if (!response.ok) {
         const error = await response.text()
-        throw new Error(error || 'Login failed')
+        throw new Error(error || `Login failed (${response.status})`)
       }
       
       const data = await response.json()
@@ -60,7 +60,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
       if (!response.ok) {
         const error = await response.text()
-        throw new Error(error || 'Registration failed')
+        throw new Error(error || `Registration failed (${response.status})`)
       }
       
       const data = await response.json()

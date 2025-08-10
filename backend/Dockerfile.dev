@@ -1,6 +1,6 @@
 # バックエンド開発用Dockerfile
 # セキュリティを重視しつつ開発効率を保つ
-FROM golang:1.24-alpine
+FROM golang:1.23-alpine
 
 # 最新のセキュリティパッチを適用
 RUN apk update && apk upgrade && \
