@@ -7,8 +7,8 @@ RUN apk update && apk upgrade && \
     apk add --no-cache git ca-certificates tzdata && \
     rm -rf /var/cache/apk/*
 
-# 開発用ツールをインストール
-RUN go install github.com/air-verse/air@latest
+# 開発用ツールをインストール（Go 1.23対応バージョン）
+RUN go install github.com/air-verse/air@v1.52.3
 
 # non-rootユーザーを作成
 RUN addgroup -g 1001 -S appuser && \
