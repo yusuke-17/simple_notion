@@ -19,6 +19,10 @@ export interface Document {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
+  treePath?: string;
+  level?: number;
+  sortOrder?: number;
+  isDeleted?: boolean;
 }
 
 export interface Block {

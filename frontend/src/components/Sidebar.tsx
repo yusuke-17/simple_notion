@@ -21,6 +21,25 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
     loadDocuments()
   }, [])
 
+  // Listen for document updates to refresh the sidebar
+  useEffect(() => {
+    const handleDocumentUpdate = () => {
+      loadDocuments()
+    }
+
+    const handleDocumentDelete = () => {
+      loadDocuments()
+    }
+
+    window.addEventListener('document-updated', handleDocumentUpdate)
+    window.addEventListener('document-deleted', handleDocumentDelete)
+    
+    return () => {
+      window.removeEventListener('document-updated', handleDocumentUpdate)
+      window.removeEventListener('document-deleted', handleDocumentDelete)
+    }
+  }, [])
+
   const loadDocuments = async () => {
     try {
       const response = await fetch('/api/documents', {
@@ -194,11 +213,17 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
                   {doc.title || 'Untitled'}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {new Date(doc.updatedAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'numeric',
-                    day: 'numeric'
-                  })}
+                  {(() => {
+                    if (!doc.updatedAt) return 'No date';
+                    const date = new Date(doc.updatedAt);
+                    return isNaN(date.getTime()) 
+                      ? 'Invalid date' 
+                      : date.toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'numeric',
+                          day: 'numeric'
+                        });
+                  })()}
                 </div>
                 
                 {/* 通常のドキュメントの削除ボタン（ホバー時表示） */}

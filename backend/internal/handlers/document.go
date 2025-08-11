@@ -85,7 +85,7 @@ func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request)
 	var req struct {
 		Title    string `json:"title"`
 		Content  string `json:"content"`
-		ParentID *int   `json:"parent_id"`
+		ParentID *int   `json:"parentId"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -206,7 +206,7 @@ func (h *DocumentHandler) MoveDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		NewParentID *int `json:"parent_id"`
+		NewParentID *int `json:"parentId"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

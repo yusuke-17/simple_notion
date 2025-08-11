@@ -466,4 +466,75 @@ describe('Sidebar Component', () => {
     // 削除キャンセル機能の存在を確認
     expect(mockOnDocumentDelete).toBeDefined()
   })
+
+  it('document-updatedイベントが発生したときにドキュメントリストを更新する', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockDocuments,
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          ...mockDocuments,
+          { 
+            id: 4, 
+            title: 'Updated Document', 
+            content: 'Updated content',
+            parentId: null,
+            userId: 1,
+            createdAt: '2023-01-05T00:00:00Z',
+            updatedAt: '2023-01-05T00:00:00Z',
+          }
+        ],
+      } as Response)
+
+    render(<Sidebar {...defaultProps} />)
+
+    // 初期ロードの確認
+    await waitFor(() => {
+      expect(screen.getByText('First Document')).toBeInTheDocument()
+    })
+
+    // document-updatedイベントを発生させる
+    const event = new CustomEvent('document-updated')
+    window.dispatchEvent(event)
+
+    // リストが更新されることを確認
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('document-deletedイベントが発生したときにドキュメントリストを更新する', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockDocuments,
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [mockDocuments[0]], // 2番目のドキュメントが削除された状態
+      } as Response)
+
+    render(<Sidebar {...defaultProps} />)
+
+    // 初期ロードの確認
+    await waitFor(() => {
+      expect(screen.getByText('Second Document')).toBeInTheDocument()
+    })
+
+    // document-deletedイベントを発生させる
+    const event = new CustomEvent('document-deleted', {
+      detail: { documentId: 2 }
+    })
+    window.dispatchEvent(event)
+
+    // リストが更新されることを確認
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+  })
 })

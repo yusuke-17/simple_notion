@@ -4,16 +4,16 @@ import "time"
 
 type Document struct {
 	ID        int       `json:"id" db:"id"`
-	UserID    int       `json:"user_id" db:"user_id"`
-	ParentID  *int      `json:"parent_id" db:"parent_id"`
+	UserID    int       `json:"userId" db:"user_id"`
+	ParentID  *int      `json:"parentId" db:"parent_id"`
 	Title     string    `json:"title" db:"title"`
 	Content   string    `json:"content" db:"content"`
-	TreePath  string    `json:"tree_path" db:"tree_path"`
+	TreePath  string    `json:"treePath" db:"tree_path"`
 	Level     int       `json:"level" db:"level"`
-	SortOrder int       `json:"sort_order" db:"sort_order"`
-	IsDeleted bool      `json:"is_deleted" db:"is_deleted"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	SortOrder int       `json:"sortOrder" db:"sort_order"`
+	IsDeleted bool      `json:"isDeleted" db:"is_deleted"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
 }
 
 type DocumentTreeNode struct {
