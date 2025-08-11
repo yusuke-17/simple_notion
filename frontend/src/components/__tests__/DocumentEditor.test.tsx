@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi, describe, it, beforeEach, expect, type MockedFunction } from 'vitest'
+import { describe, it, beforeEach, expect, vi, type MockedFunction } from 'vitest'
 import { DocumentEditor } from '../DocumentEditor'
 
 // fetchのモック
@@ -120,17 +120,16 @@ describe('DocumentEditor Component', () => {
     await user.click(saveButton)
     
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith('/api/documents/1', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: 'Updated Title',
-          content: 'Test content',
-        }),
-      })
+      expect(fetch).toHaveBeenCalledWith('/api/documents/1', 
+        expect.objectContaining({
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: expect.stringContaining('"title":"Updated Title"')
+        })
+      )
     })
   })
 

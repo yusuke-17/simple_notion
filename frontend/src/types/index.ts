@@ -30,7 +30,7 @@ export interface Block {
   type: string;
   content: string;
   documentId: number;
-  order: number;
+  position: number; // Changed from 'order' to match backend
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
