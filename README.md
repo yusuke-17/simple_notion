@@ -47,26 +47,53 @@ cd simple_notion
 
 #### 環境変数の設定
 ```bash
-# 環境変数ファイルをコピー
+# 開発環境用
 cp .env.example .env
+
+# 本番環境用
+cp .env.production .env
+# その後、適切なパスワードとJWT秘密鍵を設定
 ```
 
+**重要:** 本番環境では必ず以下を変更してください：
+- `POSTGRES_PASSWORD`: 強力なパスワードを設定
+- `JWT_SECRET`: 長いランダムな文字列を設定
+
 #### Docker Composeで起動
+
+**ローカル開発環境:**
+```bash
+# 開発環境で起動（ホットリロード、デバッグモード）
+docker-compose -f docker-compose.dev.yml up -d
+
+# または
+make dev  # Makefileにコマンドが定義されている場合
+```
+
+**本番環境:**
+```bash
+# 本番環境で起動（最適化ビルド、セキュリティ強化）
+docker-compose up -d
+
+# 環境変数ファイルを指定する場合
+cp .env.production .env
+docker-compose up -d
+```
+
+**その他の便利なコマンド:**
 ```bash
 # 全サービスを一括起動
 make up
-# または
-docker-compose up -d
 
-# ログを確認
-docker-compose logs -f
-
-# その他の便利なコマンド
+# サービス停止
 make stop          # サービス停止
 make restart       # サービス再起動
 make logs          # ログ表示
 make ps            # コンテナ状況確認
 make clean         # コンテナとイメージの削除
+
+# ログを確認
+docker-compose logs -f
 ```
 
 ### 3. 個別に開発する場合
@@ -92,9 +119,27 @@ go run cmd/server/main.go
 
 ## アクセス
 
+### 開発環境
 - **フロントエンド**: http://localhost:5173
 - **バックエンドAPI**: http://localhost:8080
 - **PostgreSQL**: localhost:5432
+
+### 本番環境
+- **フロントエンド**: http://localhost:3000
+- **バックエンドAPI**: http://localhost:8080（内部通信）
+- **PostgreSQL**: Docker内部ネットワーク
+
+## 環境の違い
+
+| 項目 | 開発環境 | 本番環境 |
+|------|----------|----------|
+| **Docker Compose** | `docker-compose.dev.yml` | `docker-compose.yml` |
+| **フロントエンド** | Vite開発サーバー（HMR対応）| Nginx静的配信 |
+| **バックエンド** | Airホットリロード | 最適化済みバイナリ |
+| **セキュリティ** | 開発重視 | 強化（read-only, no-new-privileges） |
+| **ポート** | 5173（frontend）, 8080（backend） | 3000（frontend）, 8080（backend） |
+| **環境変数** | `.env` | `.env.production` |
+| **GIN_MODE** | debug | release |
 
 ## デフォルト設定
 

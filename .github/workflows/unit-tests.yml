@@ -78,6 +78,15 @@ jobs:
         else
           echo "❌ go.sum not found"
         fi
+        
+        # Dockerfileの確認（air固定バージョンの検証）
+        echo "Checking Dockerfile.dev for air version..."
+        if grep -q "air@v1.52.3" Dockerfile.dev; then
+          echo "✅ Air version is correctly pinned to v1.52.3"
+        else
+          echo "⚠️  Air version check - current air installation:"
+          grep "air@" Dockerfile.dev || echo "No air installation found"
+        fi
 
     - name: Install dependencies
       run: |
@@ -117,7 +126,7 @@ jobs:
 
     - name: Test Docker builds
       run: |
-        # Dockerイメージのビルドテストのみ実行（テスト重複を避ける）
+        # Dockerイメージのビルドテスト（新しいDockerfile構成に対応）
         echo "Testing backend development Docker build..."
         docker build -f backend/Dockerfile.dev -t backend-dev-test:latest backend/
         
@@ -125,50 +134,80 @@ jobs:
         docker build -f frontend/Dockerfile.dev -t frontend-dev-test:latest frontend/
         
         echo "Testing production Docker builds..."
+        # 本番環境用バックエンド（distrolessベース）
         docker build -f backend/Dockerfile -t backend-prod-test:latest backend/
-        docker build -f frontend/Dockerfile -t frontend-prod-test:latest frontend/
+        
+        # 本番環境用フロントエンド（nginx + non-rootユーザー）
+        docker build -f frontend/Dockerfile \
+          --build-arg VITE_API_BASE_URL="" \
+          -t frontend-prod-test:latest frontend/
         
         echo "Docker build tests completed successfully!"
+        
+        # ビルドされたイメージのサイズ確認
+        echo "Built image sizes:"
+        docker images | grep -E "(backend|frontend).*test"
 
     - name: Test Docker Compose setup
       run: |
-        # Docker Composeの設定テスト
+        # Docker Composeの設定テスト（新しい本番/開発分離構成）
+        echo "Testing production docker-compose.yml..."
         docker compose -f docker-compose.yml config
+        
+        echo "Testing development docker-compose.dev.yml..."
         docker compose -f docker-compose.dev.yml config
+        
+        # .env.example確認
+        if [ -f .env.example ]; then
+          echo "✅ .env.example found"
+          echo "Sample environment variables:"
+          head -10 .env.example
+        else
+          echo "⚠️  .env.example not found"
+        fi
 
     - name: Test Docker development environment
       run: |
-        # .env.exampleから.envを作成
+        # .env.exampleから.envを作成（環境変数設定）
         if [ -f .env.example ]; then
           cp .env.example .env
         else
           echo "Warning: .env.example not found, creating minimal .env"
-          echo "# Minimal env for testing" > .env
+          cat > .env << EOF
+        # Minimal env for CI testing
+        POSTGRES_PASSWORD=ci_test_password
+        JWT_SECRET=ci_test_jwt_secret_key_for_github_actions
+        EOF
         fi
         
         # 開発環境起動テスト
         echo "Starting development environment..."
         docker compose -f docker-compose.dev.yml up -d --build
         
-        # サービス起動待機
-        echo "Waiting for services to start..."
-        sleep 60
+        # データベース起動待機（ヘルスチェック使用）
+        echo "Waiting for database to be healthy..."
+        timeout 120 bash -c 'until docker compose -f docker-compose.dev.yml ps | grep -q "db.*healthy"; do echo "Waiting for database..."; sleep 5; done'
+        
+        # バックエンド起動待機（追加時間）
+        echo "Waiting for backend to be ready..."
+        sleep 30
         
         # 各サービスのステータス確認
         echo "Checking service status..."
         docker compose -f docker-compose.dev.yml ps
         
-        # ヘルスチェック（フロントエンド）
+        # ヘルスチェック（フロントエンド - 開発環境は5173ポート）
         echo "Testing frontend connectivity..."
-        timeout 30 bash -c 'until curl -f http://localhost:5173 > /dev/null 2>&1; do echo "Waiting for frontend..."; sleep 3; done' || echo "Frontend health check failed"
+        timeout 60 bash -c 'until curl -f http://localhost:5173 > /dev/null 2>&1; do echo "Waiting for frontend..."; sleep 5; done' || echo "Frontend health check failed"
         
-        # ヘルスチェック（バックエンド）
+        # ヘルスチェック（バックエンド - 8080ポート）
         echo "Testing backend connectivity..."
-        timeout 30 bash -c 'until curl -f http://localhost:8080 > /dev/null 2>&1; do echo "Waiting for backend..."; sleep 3; done' || echo "Backend health check failed"
+        timeout 60 bash -c 'until curl -f http://localhost:8080/api/health > /dev/null 2>&1; do echo "Waiting for backend..."; sleep 5; done' || echo "Backend health check failed - trying root endpoint"
+        timeout 30 bash -c 'until curl -f http://localhost:8080 > /dev/null 2>&1; do echo "Waiting for backend root..."; sleep 5; done' || echo "Backend root health check failed"
         
         # ログ出力（デバッグ用）
         echo "Service logs:"
-        docker compose -f docker-compose.dev.yml logs --tail=20
+        docker compose -f docker-compose.dev.yml logs --tail=50
         
     - name: Cleanup Docker environment
       if: always()

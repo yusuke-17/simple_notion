@@ -1,18 +1,42 @@
-.PHONY: build up-backend up-frontend up stop clean logs dev up-db ps restart health migrate shell-db shell-backend clean-containers test help
+.PHONY: build up-backend up-frontend up stop clean logs dev dev-up dev-stop prod-up prod-stop up-db ps restart health migrate shell-db shell-backend clean-containers test help
 
 # GoとReactのビルド
 build:
 	docker-compose build
 
-# backendの起動
+# 開発環境用のビルド
+build-dev:
+	docker-compose -f docker-compose.dev.yml build
+
+# 本番環境用のビルド
+build-prod:
+	docker-compose build
+
+# 開発環境での起動
+dev-up:
+	docker-compose -f docker-compose.dev.yml up -d
+
+# 開発環境での停止
+dev-stop:
+	docker-compose -f docker-compose.dev.yml stop
+
+# 本番環境での起動
+prod-up:
+	docker-compose up -d
+
+# 本番環境での停止
+prod-stop:
+	docker-compose stop
+
+# backendの起動（本番環境）
 up-backend:
 	docker-compose up -d db backend
 
-# frontendの起動  
+# frontendの起動（本番環境）
 up-frontend:
 	docker-compose up -d frontend
 
-# backendとfrontendの起動
+# backendとfrontendの起動（本番環境・デフォルト）
 up:
 	docker-compose up -d
 
@@ -31,7 +55,11 @@ logs:
 
 # 開発用の起動（ログ表示）
 dev:
-	docker-compose up
+	docker-compose -f docker-compose.dev.yml up
+
+# 開発環境のログ確認
+dev-logs:
+	docker-compose -f docker-compose.dev.yml logs -f
 
 # データベースのみ起動
 up-db:
@@ -110,14 +138,27 @@ check-env:
 # ヘルプ
 help:
 	@echo "利用可能なコマンド:"
-	@echo "  build        - GoとReactのビルド"
+	@echo ""
+	@echo "=== 開発環境 ==="
+	@echo "  dev-up       - 開発環境での起動（HMR対応）"
+	@echo "  dev-stop     - 開発環境での停止"
+	@echo "  dev          - 開発環境での起動（ログ表示）"
+	@echo "  dev-logs     - 開発環境のログ確認"
+	@echo "  build-dev    - 開発環境用のビルド"
+	@echo ""
+	@echo "=== 本番環境 ==="
+	@echo "  prod-up      - 本番環境での起動"
+	@echo "  prod-stop    - 本番環境での停止"
+	@echo "  build-prod   - 本番環境用のビルド"
+	@echo ""
+	@echo "=== 共通 ==="
+	@echo "  build        - GoとReactのビルド（本番環境）"
 	@echo "  up-backend   - backendの起動"
 	@echo "  up-frontend  - frontendの起動"
-	@echo "  up           - backendとfrontendの起動"
+	@echo "  up           - backendとfrontendの起動（本番環境・デフォルト）"
 	@echo "  stop         - dockerの停止"
 	@echo "  clean        - dockerのコンテナとイメージの削除"
 	@echo "  logs         - ログの確認"
-	@echo "  dev          - 開発用の起動（ログ表示）"
 	@echo "  up-db        - データベースのみ起動"
 	@echo "  ps           - コンテナの状態確認"
 	@echo "  restart      - サービスの再起動"

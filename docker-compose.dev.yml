@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   db:
-    image: postgres:17
+    image: postgres:17-alpine
     environment:
       POSTGRES_DB: notion_app
       POSTGRES_USER: postgres
@@ -16,6 +16,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # 開発環境ではセキュリティ制約を緩める
+    tmpfs:
+      - /tmp
 
   backend:
     build: 
@@ -28,12 +31,16 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://postgres:password@db:5432/notion_app?sslmode=disable
-      JWT_SECRET: your-secret-key-change-in-production
+      JWT_SECRET: dev-secret-key-not-for-production
       PORT: 8080
+      GIN_MODE: debug
     volumes:
       - ./backend:/app
       - /app/tmp
+      - go_cache:/go/pkg/mod  # Go modules cache
     working_dir: /app
+    # 開発環境では自動再起動
+    restart: unless-stopped
 
   frontend:
     build:
@@ -46,11 +53,20 @@ services:
     environment:
       NODE_ENV: development
       VITE_API_BASE_URL: http://localhost:8080
+      # HMR (Hot Module Replacement) の設定
+      VITE_HMR_HOST: localhost
+      VITE_HMR_PORT: 5173
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - node_cache:/root/.npm  # npm cache
     working_dir: /app
-    command: npm run dev -- --host 0.0.0.0
+    # HMRのためのポート設定
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    # 開発環境では自動再起動
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  go_cache:  # Go modules cache volume
+  node_cache:  # npm cache volume

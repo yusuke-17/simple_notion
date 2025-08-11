@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -16,6 +18,16 @@ import (
 )
 
 func main() {
+	// ヘルスチェックフラグの処理
+	if len(os.Args) > 1 && os.Args[1] == "--health" {
+		if err := healthCheck(); err != nil {
+			fmt.Fprintf(os.Stderr, "Health check failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Health check passed")
+		os.Exit(0)
+	}
+
 	cfg := config.Load()
 
 	// データベース接続
@@ -89,4 +101,22 @@ func main() {
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, handler))
+}
+
+// healthCheck performs a simple health check by checking database connectivity
+func healthCheck() error {
+	cfg := config.Load()
+
+	// データベース接続確認
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	return nil
 }

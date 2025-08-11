@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: notion_app
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5432:5432"
     volumes:
@@ -22,6 +22,7 @@ services:
     tmpfs:
       - /tmp
       - /var/run/postgresql
+    restart: unless-stopped
 
   backend:
     build: 
@@ -33,26 +34,35 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://postgres:password@db:5432/notion_app?sslmode=disable
-      JWT_SECRET: your-secret-key-change-in-production
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@db:5432/notion_app?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       PORT: 8080
+      GIN_MODE: release
     security_opt:
       - no-new-privileges:true
     read_only: true
     tmpfs:
       - /tmp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/main", "--health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""  # 本番では相対パスを使用（nginxプロキシ経由）
     ports:
       - "3000:8080"
     depends_on:
       - backend
     environment:
       NODE_ENV: production
-      VITE_API_BASE_URL: ""  # 本番では相対パスを使用（nginxプロキシ経由）
     security_opt:
       - no-new-privileges:true
     read_only: true
@@ -66,6 +76,13 @@ services:
       - /var/cache/nginx/fastcgi_temp
       - /var/cache/nginx/uwsgi_temp
       - /var/cache/nginx/scgi_temp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "test -f /usr/share/nginx/html/index.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres_data:
