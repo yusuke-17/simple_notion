@@ -13,6 +13,7 @@ interface BlockEditorProps {
   onMoveDown: (id: number) => void
   onFocus: (id: number) => void
   isLastBlock: boolean
+  dragHandleProps?: Record<string, unknown>
 }
 
 const BLOCK_TYPES = {
@@ -33,7 +34,8 @@ export function BlockEditor({
   onAddBlock,
   onMoveUp,
   onMoveDown,
-  onFocus
+  onFocus,
+  dragHandleProps
 }: Omit<BlockEditorProps, 'isLastBlock'>) {
   const [isHovered, setIsHovered] = useState(false)
   const [showTypeSelector, setShowTypeSelector] = useState(false)
@@ -145,6 +147,7 @@ export function BlockEditor({
             variant="ghost"
             size="sm"
             className="h-6 w-6 p-0 cursor-grab"
+            {...dragHandleProps}
           >
             <GripVertical className="h-3 w-3" />
           </Button>

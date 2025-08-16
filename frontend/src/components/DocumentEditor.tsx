@@ -1,8 +1,23 @@
 import { useState, useEffect, useCallback } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Save, Trash2, Plus } from 'lucide-react'
-import { BlockEditor } from './BlockEditor'
+import { SortableBlockEditor } from './SortableBlockEditor'
 import type { Document, Block } from '@/types'
 
 interface DocumentEditorProps {
@@ -19,6 +34,14 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -204,6 +227,23 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     console.log('Block focused:', blockId)
   }, [])
 
+  // Handle drag end event
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      setBlocks((blocks) => {
+        const oldIndex = blocks.findIndex((block) => block.id.toString() === active.id)
+        const newIndex = blocks.findIndex((block) => block.id.toString() === over.id)
+
+        const newBlocks = arrayMove(blocks, oldIndex, newIndex)
+        
+        // Update position for all blocks after reordering
+        return newBlocks.map((block, index) => ({ ...block, position: index }))
+      })
+    }
+  }, [])
+
   const addNewBlock = useCallback(() => {
     const lastBlock = blocks[blocks.length - 1]
     if (lastBlock) {
@@ -286,18 +326,29 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       {/* Editor */}
       <div className="flex-1 p-4 pl-16">
         <div className="max-w-4xl">
-          {blocks.map((block) => (
-            <BlockEditor
-              key={block.id}
-              block={block}
-              onUpdate={handleBlockUpdate}
-              onDelete={handleBlockDelete}
-              onAddBlock={handleAddBlock}
-              onMoveUp={handleMoveBlockUp}
-              onMoveDown={handleMoveBlockDown}
-              onFocus={handleBlockFocus}
-            />
-          ))}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={blocks.map(block => block.id.toString())}
+              strategy={verticalListSortingStrategy}
+            >
+              {blocks.map((block) => (
+                <SortableBlockEditor
+                  key={block.id}
+                  block={block}
+                  onUpdate={handleBlockUpdate}
+                  onDelete={handleBlockDelete}
+                  onAddBlock={handleAddBlock}
+                  onMoveUp={handleMoveBlockUp}
+                  onMoveDown={handleMoveBlockDown}
+                  onFocus={handleBlockFocus}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           
           {/* Add block button */}
           <div className="group py-2">
