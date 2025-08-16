@@ -146,7 +146,7 @@ describe('Login Component', () => {
     })
   })
 
-  it('ローディング中は送信ボタンが無効化される', () => {
+  it('ローディング中は送信ボタンが無効化される', async () => {
     // ローディング中のストア状態をモック
     vi.mocked(mockLogin).mockClear()
     vi.mocked(mockRegister).mockClear()
@@ -166,7 +166,10 @@ describe('Login Component', () => {
       
       React.useEffect(() => {
         // ローディング状態をシミュレート
-        setTimeout(() => setIsLoading(false), 100)
+        const timeoutId = setTimeout(() => setIsLoading(false), 100)
+        
+        // クリーンアップ関数でtimeoutをクリア
+        return () => clearTimeout(timeoutId)
       }, [])
       
       if (isLoading) {
