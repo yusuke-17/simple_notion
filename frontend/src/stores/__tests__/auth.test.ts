@@ -33,7 +33,7 @@ describe('AuthStore', () => {
       const { login } = useAuthStore.getState()
       await login('test@example.com', 'password123')
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/auth/login', {
+      expect(fetch).toHaveBeenCalledWith('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: 'test@example.com', password: 'password123' }),
@@ -114,7 +114,7 @@ describe('AuthStore', () => {
       const { register } = useAuthStore.getState()
       await register('test@example.com', 'password123', 'Test User')
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/auth/register', {
+      expect(fetch).toHaveBeenCalledWith('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: 'test@example.com', password: 'password123', name: 'Test User' }),
@@ -186,7 +186,7 @@ describe('AuthStore', () => {
       const { logout } = useAuthStore.getState()
       await logout()
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/auth/logout', {
+      expect(fetch).toHaveBeenCalledWith('/api/auth/logout', {
         method: 'POST',
         credentials: 'include'
       })
@@ -235,7 +235,7 @@ describe('AuthStore', () => {
       const { checkAuth } = useAuthStore.getState()
       await checkAuth()
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/auth/me', {
+      expect(fetch).toHaveBeenCalledWith('/api/auth/me', {
         credentials: 'include'
       })
 
