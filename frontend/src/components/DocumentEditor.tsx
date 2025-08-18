@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Save, Trash2, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { SortableBlockEditor } from './SortableBlockEditor'
 import type { Document, Block } from '@/types'
 
@@ -32,8 +32,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const [document, setDocument] = useState<DocumentWithBlocks | null>(null)
   const [title, setTitle] = useState('')
   const [blocks, setBlocks] = useState<Block[]>([])
-  const [isSaving, setIsSaving] = useState(false)
-  const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -82,7 +80,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const saveDocument = useCallback(async () => {
     if (!document) return
 
-    setIsSaving(true)
     try {
       // Prepare blocks with proper order
       const orderedBlocks = blocks.map((block, index) => ({
@@ -108,39 +105,13 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
         if (updatedDoc.blocks) {
           setBlocks(updatedDoc.blocks.sort((a: Block, b: Block) => a.position - b.position))
         }
-        setLastSaved(new Date())
         // Trigger document list refresh
         window.dispatchEvent(new CustomEvent('document-updated'))
       }
     } catch (error) {
       console.error('Failed to save document:', error)
-    } finally {
-      setIsSaving(false)
     }
   }, [document, documentId, title, blocks])
-
-  const deleteDocument = useCallback(async () => {
-    if (!document) return
-
-    const confirmed = window.confirm('Are you sure you want to delete this document?')
-    if (!confirmed) return
-
-    try {
-      const response = await fetch(`/api/documents/${documentId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      })
-
-      if (response.ok) {
-        // Trigger document deletion event
-        window.dispatchEvent(new CustomEvent('document-deleted', {
-          detail: { documentId }
-        }))
-      }
-    } catch (error) {
-      console.error('Failed to delete document:', error)
-    }
-  }, [document, documentId])
 
   const handleBlockUpdate = useCallback((blockId: number, content: string, type?: string) => {
     setBlocks(prevBlocks => 
@@ -293,33 +264,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
             placeholder="Untitled"
             className="text-2xl font-bold border-none p-0 h-auto bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
           />
-          
-          <div className="flex items-center space-x-2">
-            {lastSaved && (
-              <span className="text-sm text-gray-500">
-                Saved {lastSaved.toLocaleTimeString()}
-              </span>
-            )}
-            
-            <Button
-              onClick={saveDocument}
-              disabled={isSaving}
-              variant="outline"
-              size="sm"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {isSaving ? 'Saving...' : 'Save'}
-            </Button>
-
-            <Button
-              onClick={deleteDocument}
-              variant="outline"
-              size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
       </div>
 
