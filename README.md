@@ -211,12 +211,10 @@ go run cmd/server/main.go
 ### 開発環境
 - **フロントエンド**: http://localhost:5173
 - **バックエンドAPI**: http://localhost:8080
-- **PostgreSQL**: localhost:5432
 
 ### 本番環境
 - **フロントエンド**: http://localhost:3000
-- **バックエンドAPI**: http://localhost:8080（内部通信）
-- **PostgreSQL**: Docker内部ネットワーク
+- **バックエンドAPI**: 内部通信
 
 ## 環境の違い
 
@@ -229,12 +227,6 @@ go run cmd/server/main.go
 | **ポート** | 5173（frontend）, 8080（backend） | 3000（frontend）, 8080（backend） |
 | **環境変数** | `.env` | `.env.production` |
 | **GIN_MODE** | debug | release |
-
-## デフォルト設定
-
-- **データベース**: `notion_app`
-- **ユーザー**: `postgres`
-- **パスワード**: `password`
 
 ## API エンドポイント
 
@@ -359,7 +351,7 @@ docker compose logs frontend
 
 #### データベース接続エラー
 - PostgreSQLが起動しているか確認
-- `DATABASE_URL`の設定が正しいか確認
+- データベース設定が正しいか確認
 
 ## ライセンス
 
