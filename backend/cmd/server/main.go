@@ -13,6 +13,7 @@ import (
 
 	"simple-notion-backend/internal/config"
 	"simple-notion-backend/internal/handlers"
+	"simple-notion-backend/internal/handlers/document"
 	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/repository"
 )
@@ -54,7 +55,7 @@ func main() {
 
 	// ハンドラー初期化
 	authHandler := handlers.NewAuthHandler(userRepo, []byte(cfg.JWTSecret))
-	docHandler := handlers.NewDocumentHandler(docRepo)
+	docHandler := document.NewDocumentHandler(docRepo)
 
 	// ルーター設定
 	r := mux.NewRouter()
