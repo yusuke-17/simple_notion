@@ -189,6 +189,7 @@ export function RichTextEditor({
       <EditorContent
         editor={editor}
         className="min-h-[2rem] prose prose-sm max-w-none focus-within:outline-none [&_u]:underline [&_u]:decoration-2 [&_u]:underline-offset-2 [&_u]:decoration-blue-500"
+        data-testid="rich-text-editor"
       />
       
       {/* Selection-based Toolbar - Show only when text is selected */}
