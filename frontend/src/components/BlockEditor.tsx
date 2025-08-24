@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Trash2, GripVertical, Plus } from 'lucide-react'
+import { RichTextEditor } from '@/components/RichTextEditor'
 import type { Block } from '@/types'
 
 interface BlockEditorProps {
@@ -68,6 +69,34 @@ export function BlockEditor({
       e.preventDefault()
       setShowTypeSelector(true)
     }
+  }
+
+  const handleRichTextKeyDown = (e: KeyboardEvent): boolean | void => {
+    // Check if content is empty for certain key actions
+    const isEmpty = !block.content || block.content === '' || block.content === '{"type":"doc","content":[]}'
+    
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      onAddBlock(block.id, 'text')
+      return false // Prevent default
+    } else if (e.key === 'Backspace' && isEmpty) {
+      e.preventDefault()
+      onDelete(block.id)
+      return false // Prevent default
+    } else if (e.key === 'ArrowUp' && e.metaKey) {
+      e.preventDefault()
+      onMoveUp(block.id)
+      return false // Prevent default
+    } else if (e.key === 'ArrowDown' && e.metaKey) {
+      e.preventDefault()
+      onMoveDown(block.id)
+      return false // Prevent default
+    } else if (e.key === '/' && isEmpty) {
+      e.preventDefault()
+      setShowTypeSelector(true)
+      return false // Prevent default
+    }
+    // Allow default behavior for other keys
   }
 
   const handleTypeChange = (newType: string) => {
@@ -182,6 +211,15 @@ export function BlockEditor({
               onFocus={() => onFocus(block.id)}
               placeholder={getPlaceholder()}
               className={getClassName()}
+            />
+          ) : block.type === 'text' ? (
+            <RichTextEditor
+              content={block.content}
+              placeholder={getPlaceholder()}
+              onUpdate={(content) => onUpdate(block.id, content)}
+              onFocus={() => onFocus(block.id)}
+              onKeyDown={handleRichTextKeyDown}
+              className="min-h-[2rem]"
             />
           ) : (
             <textarea

@@ -34,3 +34,30 @@ export interface Block {
   createdAt: string;
   updatedAt?: string;
 }
+
+// Rich text content types for TipTap
+export interface TipTapDocument {
+  type: 'doc';
+  content?: TipTapNode[];
+}
+
+export interface TipTapNode {
+  type: string;
+  content?: TipTapNode[];
+  marks?: TipTapMark[];
+  text?: string;
+  attrs?: Record<string, unknown>;
+}
+
+export interface TipTapMark {
+  type: string;
+  attrs?: Record<string, unknown>;
+}
+
+// Block content format types
+export type BlockContentFormat = 'plain' | 'rich';
+
+export interface RichBlock extends Omit<Block, 'content'> {
+  content: string; // JSON string for rich text, plain string for legacy
+  format?: BlockContentFormat;
+}

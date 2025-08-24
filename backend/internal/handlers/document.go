@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -134,6 +135,22 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
+	}
+
+	// Validate rich text JSON if applicable
+	if err := ValidateRichTextJSON(req.Content); err != nil {
+		http.Error(w, "Invalid rich text content", http.StatusBadRequest)
+		return
+	}
+
+	// Validate block content for rich text format
+	for i, block := range req.Blocks {
+		if content, ok := block.Content.(string); ok {
+			if err := ValidateRichTextJSON(content); err != nil {
+				http.Error(w, fmt.Sprintf("Invalid rich text content in block %d", i), http.StatusBadRequest)
+				return
+			}
+		}
 	}
 
 	// ドキュメント更新（titleとcontentの両方を更新）
