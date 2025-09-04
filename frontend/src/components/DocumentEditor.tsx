@@ -52,21 +52,12 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
           setDocument(doc)
           setTitle(doc.title)
           
-          // Initialize blocks if empty
+          // Initialize blocks only if they exist
           if (doc.blocks && doc.blocks.length > 0) {
             setBlocks(doc.blocks.sort((a: Block, b: Block) => a.position - b.position))
           } else {
-            // Create initial text block
-            const initialBlock: Block = {
-              id: Date.now(), // Temporary ID for new blocks
-              type: 'text',
-              content: doc.content || '',
-              documentId: documentId,
-              position: 0,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }
-            setBlocks([initialBlock])
+            // Don't create any blocks initially - let user add them manually
+            setBlocks([])
           }
         }
       } catch (error) {
@@ -126,21 +117,10 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const handleBlockDelete = useCallback((blockId: number) => {
     setBlocks(prevBlocks => {
       const newBlocks = prevBlocks.filter(block => block.id !== blockId)
-      // If no blocks left, create a default text block
-      if (newBlocks.length === 0) {
-        return [{
-          id: Date.now(),
-          type: 'text',
-          content: '',
-          documentId: documentId,
-          position: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }]
-      }
+      // Allow empty blocks array - user can add blocks manually
       return newBlocks
     })
-  }, [documentId])
+  }, [])
 
   const handleAddBlock = useCallback((afterBlockId: number, type: string) => {
     setBlocks(prevBlocks => {
@@ -237,7 +217,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   // Auto-save functionality
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (document && blocks.length > 0) {
+      if (document) {
         saveDocument()
       }
     }, 1000)
@@ -294,12 +274,14 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
             </SortableContext>
           </DndContext>
           
-          {/* Add block button */}
-          <div className="group py-2">
+          {/* Add block button - Improved Notion-like styling */}
+          <div className="group py-3 px-2 hover:bg-gray-50/50 rounded-lg transition-colors duration-100">
             <Button
               variant="ghost"
               onClick={addNewBlock}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600"
+              className={`transition-all duration-200 ease-out text-gray-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 ${
+                blocks.length === 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              }`}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add a block

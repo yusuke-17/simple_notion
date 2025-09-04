@@ -30,6 +30,7 @@ export function RichTextEditor({
   const [showToolbar, setShowToolbar] = useState(false)
   const [toolbarPosition, setToolbarPosition] = useState({ top: 0, left: 0 })
   const editorRef = useRef<HTMLDivElement>(null)
+  const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Get selection coordinates for toolbar positioning
   const getSelectionCoordinates = useCallback(() => {
@@ -65,18 +66,26 @@ export function RichTextEditor({
   }, [])
 
   const handleSelectionUpdate = useCallback(() => {
-    const selection = window.getSelection()
-    const hasSelection = selection && !selection.isCollapsed && selection.toString().trim().length > 0
-    
-    if (hasSelection) {
-      const coords = getSelectionCoordinates()
-      if (coords) {
-        setToolbarPosition(coords)
-        setShowToolbar(true)
-      }
-    } else {
-      setShowToolbar(false)
+    // Clear previous timeout to prevent excessive updates
+    if (selectionTimeoutRef.current) {
+      clearTimeout(selectionTimeoutRef.current)
     }
+    
+    // Use longer debounce for more stable toolbar behavior
+    selectionTimeoutRef.current = setTimeout(() => {
+      const selection = window.getSelection()
+      const hasSelection = selection && !selection.isCollapsed && selection.toString().trim().length > 0
+      
+      if (hasSelection) {
+        const coords = getSelectionCoordinates()
+        if (coords) {
+          setToolbarPosition(coords)
+          setShowToolbar(true)
+        }
+      } else {
+        setShowToolbar(false)
+      }
+    }, 200) // Increased debounce for stability
   }, [getSelectionCoordinates])
   
   const editor = useEditor({
@@ -104,8 +113,8 @@ export function RichTextEditor({
       onUpdate(JSON.stringify(json))
     },
     onSelectionUpdate: () => {
-      // Use setTimeout to ensure DOM is updated
-      setTimeout(handleSelectionUpdate, 0)
+      // Direct call without setTimeout to reduce delay
+      handleSelectionUpdate()
     },
     onFocus: () => {
       onFocus?.()
@@ -116,7 +125,8 @@ export function RichTextEditor({
       if (relatedTarget && relatedTarget.closest('[data-toolbar]')) {
         return // Don't hide toolbar if clicking on toolbar buttons
       }
-      setTimeout(() => setShowToolbar(false), 150)
+      // Reduce timeout for better responsiveness
+      setTimeout(() => setShowToolbar(false), 50)
     },
     editorProps: {
       attributes: {
@@ -163,6 +173,15 @@ export function RichTextEditor({
     }
   }, [content, editor])
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (selectionTimeoutRef.current) {
+        clearTimeout(selectionTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const toggleBold = useCallback(() => {
     editor?.chain().focus().toggleBold().run()
   }, [editor])
@@ -192,13 +211,14 @@ export function RichTextEditor({
         data-testid="rich-text-editor"
       />
       
-      {/* Selection-based Toolbar - Show only when text is selected */}
+      {/* Selection-based Toolbar - Improved animation and stability */}
       {showToolbar && (
         <div 
-          className="absolute flex items-center space-x-1 bg-white border border-gray-300 rounded-lg shadow-xl px-3 py-2 z-50 transition-all duration-200"
+          className="absolute flex items-center space-x-1 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 z-50 transform transition-all duration-200 ease-out scale-100 opacity-100"
           style={{
             top: `${toolbarPosition.top}px`,
             left: `${toolbarPosition.left}px`,
+            willChange: 'opacity, transform, top, left'
           }}
           data-toolbar="true"
           data-testid="selection-toolbar"
@@ -206,10 +226,10 @@ export function RichTextEditor({
           <Button
             variant={editor.isActive('bold') ? 'default' : 'ghost'}
             size="sm"
-            className={`h-8 w-8 p-0 transition-all duration-200 ${
+            className={`h-8 w-8 p-0 rounded-lg transition-all duration-150 ease-out ${
               editor.isActive('bold') 
-                ? 'bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-300' 
-                : 'hover:bg-gray-100 text-gray-600'
+                ? 'bg-blue-100 hover:bg-blue-150 text-blue-700 border border-blue-200 shadow-sm' 
+                : 'hover:bg-gray-100 text-gray-600 border border-transparent hover:border-gray-200'
             }`}
             onClick={toggleBold}
             onMouseDown={(e) => e.preventDefault()} // Prevent blur
@@ -222,10 +242,10 @@ export function RichTextEditor({
           <Button
             variant={editor.isActive('italic') ? 'default' : 'ghost'}
             size="sm"
-            className={`h-8 w-8 p-0 transition-all duration-200 ${
+            className={`h-8 w-8 p-0 rounded-lg transition-all duration-150 ease-out ${
               editor.isActive('italic') 
-                ? 'bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-300' 
-                : 'hover:bg-gray-100 text-gray-600'
+                ? 'bg-blue-100 hover:bg-blue-150 text-blue-700 border border-blue-200 shadow-sm' 
+                : 'hover:bg-gray-100 text-gray-600 border border-transparent hover:border-gray-200'
             }`}
             onClick={toggleItalic}
             onMouseDown={(e) => e.preventDefault()} // Prevent blur
@@ -238,10 +258,10 @@ export function RichTextEditor({
           <Button
             variant={editor.isActive('underline') ? 'default' : 'ghost'}
             size="sm"
-            className={`h-8 w-8 p-0 transition-all duration-200 ${
+            className={`h-8 w-8 p-0 rounded-lg transition-all duration-150 ease-out ${
               editor.isActive('underline') 
-                ? 'bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-300' 
-                : 'hover:bg-gray-100 text-gray-600'
+                ? 'bg-blue-100 hover:bg-blue-150 text-blue-700 border border-blue-200 shadow-sm' 
+                : 'hover:bg-gray-100 text-gray-600 border border-transparent hover:border-gray-200'
             }`}
             onClick={toggleUnderline}
             onMouseDown={(e) => e.preventDefault()} // Prevent blur
@@ -254,10 +274,10 @@ export function RichTextEditor({
           <Button
             variant={editor.isActive('strike') ? 'default' : 'ghost'}
             size="sm"
-            className={`h-8 w-8 p-0 transition-all duration-200 ${
+            className={`h-8 w-8 p-0 rounded-lg transition-all duration-150 ease-out ${
               editor.isActive('strike') 
-                ? 'bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-300' 
-                : 'hover:bg-gray-100 text-gray-600'
+                ? 'bg-blue-100 hover:bg-blue-150 text-blue-700 border border-blue-200 shadow-sm' 
+                : 'hover:bg-gray-100 text-gray-600 border border-transparent hover:border-gray-200'
             }`}
             onClick={toggleStrike}
             onMouseDown={(e) => e.preventDefault()} // Prevent blur

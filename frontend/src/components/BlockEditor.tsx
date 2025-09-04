@@ -38,7 +38,6 @@ export function BlockEditor({
   onFocus,
   dragHandleProps
 }: Omit<BlockEditorProps, 'isLastBlock'>) {
-  const [isHovered, setIsHovered] = useState(false)
   const [showTypeSelector, setShowTypeSelector] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -156,32 +155,29 @@ export function BlockEditor({
   }
 
   return (
-    <div
-      className="group relative py-1"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Block controls */}
-      {isHovered && (
-        <div className="absolute left-0 top-0 flex items-center space-x-1 -ml-12 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
-            onClick={() => onAddBlock(block.id, 'text')}
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 cursor-grab"
-            {...dragHandleProps}
-          >
-            <GripVertical className="h-3 w-3" />
-          </Button>
-        </div>
-      )}
+    <div className="group relative py-1 hover:bg-gray-50/50 transition-colors duration-75" style={{ willChange: 'background-color' }}>
+      {/* Block controls - improved positioning and animation */}
+      <div 
+        className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center space-x-1 -ml-12 opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-0 transition-all duration-150 ease-out"
+        style={{ willChange: 'opacity, transform' }}
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 hover:bg-blue-100 border border-transparent hover:border-blue-200 transition-all duration-100"
+          onClick={() => onAddBlock(block.id, 'text')}
+        >
+          <Plus className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 cursor-grab hover:bg-gray-200 border border-transparent hover:border-gray-300 transition-all duration-100 active:cursor-grabbing"
+          {...dragHandleProps}
+        >
+          <GripVertical className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600" />
+        </Button>
+      </div>
 
       {/* Type selector */}
       {showTypeSelector && (
@@ -235,17 +231,15 @@ export function BlockEditor({
           )}
         </div>
 
-        {/* Delete button */}
-        {isHovered && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => onDelete(block.id)}
-          >
-            <Trash2 className="h-3 w-3 text-red-500" />
-          </Button>
-        )}
+        {/* Delete button - improved styling and positioning */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 ml-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all duration-150 ease-out"
+          onClick={() => onDelete(block.id)}
+        >
+          <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+        </Button>
       </div>
     </div>
   )
