@@ -228,7 +228,7 @@ export function RichTextEditor({
             size="sm"
             className={`h-8 w-8 p-0 rounded-lg transition-all duration-150 ease-out ${
               editor.isActive('bold') 
-                ? 'bg-blue-100 hover:bg-blue-150 text-blue-700 border border-blue-200 shadow-sm' 
+                ? 'bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-200 shadow-sm' 
                 : 'hover:bg-gray-100 text-gray-600 border border-transparent hover:border-gray-200'
             }`}
             onClick={toggleBold}
@@ -244,7 +244,7 @@ export function RichTextEditor({
             size="sm"
             className={`h-8 w-8 p-0 rounded-lg transition-all duration-150 ease-out ${
               editor.isActive('italic') 
-                ? 'bg-blue-100 hover:bg-blue-150 text-blue-700 border border-blue-200 shadow-sm' 
+                ? 'bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-200 shadow-sm' 
                 : 'hover:bg-gray-100 text-gray-600 border border-transparent hover:border-gray-200'
             }`}
             onClick={toggleItalic}
@@ -260,7 +260,7 @@ export function RichTextEditor({
             size="sm"
             className={`h-8 w-8 p-0 rounded-lg transition-all duration-150 ease-out ${
               editor.isActive('underline') 
-                ? 'bg-blue-100 hover:bg-blue-150 text-blue-700 border border-blue-200 shadow-sm' 
+                ? 'bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-200 shadow-sm' 
                 : 'hover:bg-gray-100 text-gray-600 border border-transparent hover:border-gray-200'
             }`}
             onClick={toggleUnderline}
@@ -276,7 +276,7 @@ export function RichTextEditor({
             size="sm"
             className={`h-8 w-8 p-0 rounded-lg transition-all duration-150 ease-out ${
               editor.isActive('strike') 
-                ? 'bg-blue-100 hover:bg-blue-150 text-blue-700 border border-blue-200 shadow-sm' 
+                ? 'bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-200 shadow-sm' 
                 : 'hover:bg-gray-100 text-gray-600 border border-transparent hover:border-gray-200'
             }`}
             onClick={toggleStrike}
