@@ -2,101 +2,101 @@
 
 # GoとReactのビルド
 build:
-	docker-compose build
+	docker compose build
 
 # 開発環境用のビルド
 build-dev:
-	docker-compose -f docker-compose.dev.yml build
+	docker compose -f docker-compose.dev.yml build
 
 # 本番環境用のビルド
 build-prod:
-	docker-compose build
+	docker compose build
 
 # 開発環境での起動
 dev-up:
-	docker-compose -f docker-compose.dev.yml up -d
+	docker compose -f docker-compose.dev.yml up -d
 
 # 開発環境での停止
 dev-stop:
-	docker-compose -f docker-compose.dev.yml stop
+	docker compose -f docker-compose.dev.yml stop
 
 # 本番環境での起動
 prod-up:
-	docker-compose up -d
+	docker compose up -d
 
 # 本番環境での停止
 prod-stop:
-	docker-compose stop
+	docker compose stop
 
 # backendの起動（本番環境）
 up-backend:
-	docker-compose up -d db backend
+	docker compose up -d db backend
 
 # frontendの起動（本番環境）
 up-frontend:
-	docker-compose up -d frontend
+	docker compose up -d frontend
 
 # backendとfrontendの起動（本番環境・デフォルト）
 up:
-	docker-compose up -d
+	docker compose up -d
 
 # dockerの停止
 stop:
-	docker-compose stop
+	docker compose stop
 
 # dockerのコンテナとイメージの削除
 clean:
-	docker-compose down --rmi all --volumes --remove-orphans
+	docker compose down --rmi all --volumes --remove-orphans
 	docker system prune -f
 
 # ログの確認
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 # 開発用の起動（ログ表示）
 dev:
-	docker-compose -f docker-compose.dev.yml up
+	docker compose -f docker-compose.dev.yml up
 
 # 開発環境のログ確認
 dev-logs:
-	docker-compose -f docker-compose.dev.yml logs -f
+	docker compose -f docker-compose.dev.yml logs -f
 
 # データベースのみ起動
 up-db:
-	docker-compose up -d db
+	docker compose up -d db
 
 # コンテナの状態確認
 ps:
-	docker-compose ps
+	docker compose ps
 
 # サービスの再起動
 restart:
-	docker-compose restart
+	docker compose restart
 
 # ヘルスチェック確認
 health:
-	docker-compose ps
+	docker compose ps
 	@echo "\nDatabase health check:"
-	docker-compose exec db pg_isready -U postgres
+	docker compose exec db pg_isready -U postgres
 
 # データベースマイグレーション実行
 migrate:
-	docker-compose exec backend sh -c "ls /app/migrations 2>/dev/null || echo 'No migrations found'"
+	docker compose exec backend sh -c "ls /app/migrations 2>/dev/null || echo 'No migrations found'"
 
 # 軽量な削除（ボリュームは保持）
 clean-light:
-	docker-compose down
-	docker-compose rm -f
+	docker compose down
+	docker compose rm -f
 
 # コンテナのみ削除（イメージとボリュームは保持）
 clean-containers:
-	docker-compose down --remove-orphans
+	docker compose down --remove-orphans
 
 # 強制リビルド
 rebuild:
-	docker-compose down
-	docker-compose build --no-cache
-	docker-compose up -d
+	docker compose down
+	docker compose build --no-cache
+	docker compose up -d
 
 # 依存関係のインストール
 install:
@@ -161,7 +161,7 @@ deps-check:
 # ファイル監視（開発用）
 watch:
 	@echo "Starting file watch mode (development)..."
-	docker-compose -f docker-compose.dev.yml up
+	docker compose -f docker-compose.dev.yml up
 
 # 総合的なコード品質チェック
 check: lint test
@@ -170,7 +170,7 @@ check: lint test
 # 開発環境のセットアップ（初回）
 setup: install
 	@echo "Setting up development environment..."
-	docker-compose -f docker-compose.dev.yml build
+	docker compose -f docker-compose.dev.yml build
 	@echo "Development environment setup complete! 🎉"
 
 # ==============================
@@ -190,7 +190,7 @@ start: build-prod prod-up
 # 最小限のセットアップで起動（開発環境）
 quick-start:
 	@echo "Quick starting development environment..."
-	docker-compose -f docker-compose.dev.yml up -d
+	docker compose -f docker-compose.dev.yml up -d
 	@echo "Quick start complete! ⚡"
 
 # 停止→起動（開発環境）
@@ -235,8 +235,8 @@ pre-commit: format lint test
 # 全ての環境を停止
 stop-all:
 	@echo "Stopping all environments..."
-	docker-compose -f docker-compose.dev.yml stop
-	docker-compose stop
+	docker compose -f docker-compose.dev.yml stop
+	docker compose stop
 	@echo "All environments stopped! 🛑"
 
 # ヘルプ
