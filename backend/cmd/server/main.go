@@ -89,11 +89,9 @@ func main() {
 	// CORS設定
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{
-			"http://localhost:5173",  // Vite開発サーバー（ホストマシン）
-			"http://localhost:3000",  // 本番フロントエンド
-			"http://frontend:8080",   // Dockerコンテナ間通信
-			"http://172.18.0.4:5173", // フロントエンドコンテナからの直接アクセス
-			"*",                      // 開発時は全て許可
+			"http://localhost:5173", // Vite開発サーバー
+			"http://localhost:3000", // 本番フロントエンド
+			"http://frontend:8080",  // Dockerコンテナ間通信
 		},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
