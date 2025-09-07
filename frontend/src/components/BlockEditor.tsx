@@ -71,8 +71,11 @@ export function BlockEditor({
   }
 
   const handleRichTextKeyDown = (e: KeyboardEvent): boolean | void => {
-    // Check if content is empty for certain key actions
-    const isEmpty = !block.content || block.content === '' || block.content === '{"type":"doc","content":[]}'
+    // Check if content is empty for certain key actions - improved empty detection
+    const isEmpty = !block.content || 
+                   block.content.trim() === '' || 
+                   block.content === '{"type":"doc","content":[]}' ||
+                   block.content === '{"type":"doc","content":[{"type":"paragraph"}]}'
     
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -146,16 +149,16 @@ export function BlockEditor({
   const renderPrefixIcon = () => {
     switch (block.type) {
       case 'bullet':
-        return <span className="text-gray-400 mr-2">•</span>
+        return <span className="text-gray-400 mr-2 flex items-center h-[2rem] leading-none">•</span>
       case 'numbered':
-        return <span className="text-gray-400 mr-2">{block.position + 1}.</span>
+        return <span className="text-gray-400 mr-2 flex items-center h-[2rem] leading-none">{block.position + 1}.</span>
       default:
         return null
     }
   }
 
   return (
-    <div className="group relative py-1 hover:bg-gray-50/50 transition-colors duration-75" style={{ willChange: 'background-color' }}>
+    <div className="group relative py-0.5 hover:bg-gray-50/50 transition-colors duration-75" style={{ willChange: 'background-color' }}>
       {/* Block controls - improved positioning and animation */}
       <div 
         className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center space-x-1 -ml-12 opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-0 transition-all duration-150 ease-out"
@@ -194,10 +197,10 @@ export function BlockEditor({
         </div>
       )}
 
-      {/* Block content */}
-      <div className="flex items-start">
+      {/* Block content - improved stability */}
+      <div className="flex items-start"> {/* Changed from items-center to items-start for better text alignment */}
         {renderPrefixIcon()}
-        <div className="flex-1">
+        <div className="flex-1 min-h-[2rem]"> {/* Removed flex items-center for better layout */}
           {block.type === 'heading1' || block.type === 'heading2' || block.type === 'heading3' ? (
             <Input
               ref={inputRef}
@@ -209,14 +212,16 @@ export function BlockEditor({
               className={getClassName()}
             />
           ) : block.type === 'text' ? (
-            <RichTextEditor
-              content={block.content}
-              placeholder={getPlaceholder()}
-              onUpdate={(content) => onUpdate(block.id, content)}
-              onFocus={() => onFocus(block.id)}
-              onKeyDown={handleRichTextKeyDown}
-              className="min-h-[2rem]"
-            />
+            <div className="w-full">
+              <RichTextEditor
+                content={block.content}
+                placeholder={getPlaceholder()}
+                onUpdate={(content) => onUpdate(block.id, content)}
+                onFocus={() => onFocus(block.id)}
+                onKeyDown={handleRichTextKeyDown}
+                className="min-h-[2rem] w-full"
+              />
+            </div>
           ) : (
             <textarea
               ref={textareaRef}
