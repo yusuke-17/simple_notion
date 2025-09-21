@@ -36,13 +36,16 @@ describe('DocumentEditor Component', () => {
     } as unknown as Response)
   })
 
-  it('ドキュメントが正しく読み込まれる', async () => {
+  it('ドキュメントが正しく読み込まれ、初期ブロックが自動作成される', async () => {
     render(<DocumentEditor documentId={1} />)
     
     await waitFor(() => {
       expect(screen.getByDisplayValue('Test Document')).toBeInTheDocument()
-      // 新しい動作では初期状態でブロックは表示されず、Add a blockボタンが表示される
-      expect(screen.getByText('Add a block')).toBeInTheDocument()
+      // 新しい動作では空のドキュメントに自動的に初期ブロックが作成される
+      // プレースホルダーはcontenteditable要素のplaceholder属性として設定される
+      const editorContent = screen.getByTestId('editor-content')
+      expect(editorContent).toBeInTheDocument()
+      expect(editorContent.querySelector('[placeholder="Type to start writing..."]')).toBeInTheDocument()
     })
     
     expect(fetch).toHaveBeenCalledWith('/api/documents/1', {
@@ -75,20 +78,15 @@ describe('DocumentEditor Component', () => {
     expect(titleInput).toHaveValue('Updated Title')
   })
 
-  it('Add a blockボタンでブロックを追加できる', async () => {
-    const user = userEvent.setup()
+  it('空のドキュメントでは初期ブロックが自動作成される', async () => {
     render(<DocumentEditor documentId={1} />)
     
     await waitFor(() => {
-      expect(screen.getByText('Add a block')).toBeInTheDocument()
+      // 空のドキュメントでも自動的に初期ブロックが作成される
+      const editorContent = screen.getByTestId('editor-content')
+      expect(editorContent).toBeInTheDocument()
+      expect(editorContent.querySelector('[placeholder="Type to start writing..."]')).toBeInTheDocument()
     })
-    
-    // Add a blockボタンをクリック
-    const addButton = screen.getByText('Add a block')
-    await user.click(addButton)
-    
-    // ブロックが追加されることを確認（テストでは実際のブロックエディターコンポーネントの確認が必要）
-    expect(addButton).toBeInTheDocument()
   })
 
   it('既存のブロックがある場合はそれらが表示される', async () => {

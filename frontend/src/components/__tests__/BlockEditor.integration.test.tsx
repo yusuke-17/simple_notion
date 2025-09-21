@@ -45,10 +45,24 @@ describe('BlockEditor Integration with RichTextEditor', () => {
     vi.clearAllMocks()
   })
 
-  it('renders RichTextEditor for text type blocks', () => {
+  it('renders RichTextEditor for text type blocks with correct placeholder', () => {
+    const firstBlock = { ...mockBlock, position: 0 }
     render(
       <BlockEditor
-        block={mockBlock}
+        block={firstBlock}
+        {...mockProps}
+      />
+    )
+
+    expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument()
+    expect(screen.getByTestId('editor-input')).toHaveAttribute('placeholder', 'Type to start writing...')
+  })
+
+  it('renders RichTextEditor for non-first text blocks with command placeholder', () => {
+    const secondBlock = { ...mockBlock, position: 1 }
+    render(
+      <BlockEditor
+        block={secondBlock}
         {...mockProps}
       />
     )

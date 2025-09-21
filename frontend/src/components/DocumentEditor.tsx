@@ -14,9 +14,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus } from 'lucide-react'
 import { SortableBlockEditor } from './SortableBlockEditor'
 import type { Document, Block } from '@/types'
 
@@ -52,12 +50,21 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
           setDocument(doc)
           setTitle(doc.title)
           
-          // Initialize blocks only if they exist
+          // Initialize blocks
           if (doc.blocks && doc.blocks.length > 0) {
             setBlocks(doc.blocks.sort((a: Block, b: Block) => a.position - b.position))
           } else {
-            // Don't create any blocks initially - let user add them manually
-            setBlocks([])
+            // Auto-create first block for immediate typing
+            const initialBlock: Block = {
+              id: Date.now(),
+              type: 'text',
+              content: '',
+              documentId: documentId,
+              position: 0,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+            setBlocks([initialBlock])
           }
         }
       } catch (error) {
@@ -195,25 +202,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     }
   }, [])
 
-  const addNewBlock = useCallback(() => {
-    const lastBlock = blocks[blocks.length - 1]
-    if (lastBlock) {
-      handleAddBlock(lastBlock.id, 'text')
-    } else {
-      // If no blocks exist, create first block
-      const newBlock: Block = {
-        id: Date.now(),
-        type: 'text',
-        content: '',
-        documentId: documentId,
-        position: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      setBlocks([newBlock])
-    }
-  }, [blocks, handleAddBlock, documentId])
-
   // Auto-save functionality
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -248,7 +236,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       </div>
 
       {/* Editor */}
-      <div className="flex-1 p-4 pl-16">
+      <div className="flex-1 p-4 pl-20">
         <div className="max-w-4xl">
           <DndContext
             sensors={sensors}
@@ -273,20 +261,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
               ))}
             </SortableContext>
           </DndContext>
-          
-          {/* Add block button - Improved Notion-like styling */}
-          <div className="group py-3 px-2 hover:bg-gray-50/50 rounded-lg transition-colors duration-100">
-            <Button
-              variant="ghost"
-              onClick={addNewBlock}
-              className={`transition-all duration-200 ease-out text-gray-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 ${
-                blocks.length === 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add a block
-            </Button>
-          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Trash2, GripVertical, Plus } from 'lucide-react'
 import { RichTextEditor } from '@/components/RichTextEditor'
@@ -123,7 +122,7 @@ export function BlockEditor({
       case 'code':
         return 'Code'
       default:
-        return 'Type / for commands'
+        return block.position === 0 ? 'Type to start writing...' : 'Type / for commands'
     }
   }
 
@@ -159,27 +158,25 @@ export function BlockEditor({
 
   return (
     <div className="group relative py-0.5 hover:bg-gray-50/50 transition-colors duration-75" style={{ willChange: 'background-color' }}>
-      {/* Block controls - improved positioning and animation */}
+      {/* Block controls - Notion-like styling with improved spacing */}
       <div 
-        className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center space-x-1 -ml-12 opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-0 transition-all duration-150 ease-out"
+        className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center space-x-0.5 -ml-20 opacity-0 group-hover:opacity-100 transform translate-x-1 group-hover:translate-x-0 transition-all duration-200 ease-out"
         style={{ willChange: 'opacity, transform' }}
       >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0 hover:bg-blue-100 border border-transparent hover:border-blue-200 transition-all duration-100"
+        <button
+          className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors duration-150 border border-transparent hover:border-gray-200"
           onClick={() => onAddBlock(block.id, 'text')}
+          title="Add block"
         >
-          <Plus className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0 cursor-grab hover:bg-gray-200 border border-transparent hover:border-gray-300 transition-all duration-100 active:cursor-grabbing"
+          <Plus className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+        </button>
+        <button
+          className="h-8 w-8 flex items-center justify-center rounded-md cursor-grab hover:bg-gray-100 transition-colors duration-150 border border-transparent hover:border-gray-200 active:cursor-grabbing"
           {...dragHandleProps}
+          title="Drag to move"
         >
-          <GripVertical className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600" />
-        </Button>
+          <GripVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+        </button>
       </div>
 
       {/* Type selector */}
@@ -236,15 +233,14 @@ export function BlockEditor({
           )}
         </div>
 
-        {/* Delete button - improved styling and positioning */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0 ml-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all duration-150 ease-out"
+        {/* Delete button - Notion-like styling */}
+        <button
+          className="h-8 w-8 flex items-center justify-center ml-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-md transition-all duration-200 ease-out border border-transparent hover:border-red-200"
           onClick={() => onDelete(block.id)}
+          title="Delete block"
         >
-          <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
-        </Button>
+          <Trash2 className="h-4 w-4 text-gray-400 hover:text-red-500" />
+        </button>
       </div>
     </div>
   )
