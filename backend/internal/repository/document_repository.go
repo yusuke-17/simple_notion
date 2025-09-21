@@ -196,6 +196,16 @@ func (r *DocumentRepository) RestoreDocument(docID, userID int) error {
 	return err
 }
 
+func (r *DocumentRepository) PermanentDeleteDocument(docID, userID int) error {
+	query, err := r.queries.Get("PermanentDeleteDocument")
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.Exec(query, docID, userID)
+	return err
+}
+
 func (r *DocumentRepository) GetTrashedDocuments(userID int) ([]models.Document, error) {
 	query, err := r.queries.Get("GetTrashedDocuments")
 	if err != nil {

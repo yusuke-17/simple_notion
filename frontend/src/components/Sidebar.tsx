@@ -138,13 +138,13 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
     if (!confirm('Permanently delete this document? This cannot be undone.')) return
 
     try {
-      await fetch(`/api/documents/${docId}`, {
+      await fetch(`/api/documents/${docId}/permanent`, {
         method: 'DELETE',
         credentials: 'include'
       })
       await loadTrashedDocuments()
     } catch (error) {
-      console.error('Failed to delete document:', error)
+      console.error('Failed to permanently delete document:', error)
     }
   }
 

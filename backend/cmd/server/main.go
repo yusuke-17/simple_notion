@@ -84,6 +84,7 @@ func main() {
 	api.HandleFunc("/documents/{id:[0-9]+}", docHandler.UpdateDocument).Methods("PUT")
 	api.HandleFunc("/documents/{id:[0-9]+}", docHandler.DeleteDocument).Methods("DELETE")
 	api.HandleFunc("/documents/{id:[0-9]+}/restore", docHandler.RestoreDocument).Methods("PUT")
+	api.HandleFunc("/documents/{id:[0-9]+}/permanent", docHandler.PermanentDeleteDocument).Methods("DELETE")
 	api.HandleFunc("/documents/{id:[0-9]+}/move", docHandler.MoveDocument).Methods("PUT")
 
 	// CORS設定
