@@ -14,9 +14,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus } from 'lucide-react'
 import { SortableBlockEditor } from './SortableBlockEditor'
 import type { Document, Block } from '@/types'
 
@@ -52,15 +50,15 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
           setDocument(doc)
           setTitle(doc.title)
           
-          // Initialize blocks if empty
+          // Initialize blocks
           if (doc.blocks && doc.blocks.length > 0) {
             setBlocks(doc.blocks.sort((a: Block, b: Block) => a.position - b.position))
           } else {
-            // Create initial text block
+            // Auto-create first block for immediate typing
             const initialBlock: Block = {
-              id: Date.now(), // Temporary ID for new blocks
+              id: Date.now(),
               type: 'text',
-              content: doc.content || '',
+              content: '',
               documentId: documentId,
               position: 0,
               createdAt: new Date().toISOString(),
@@ -126,21 +124,10 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const handleBlockDelete = useCallback((blockId: number) => {
     setBlocks(prevBlocks => {
       const newBlocks = prevBlocks.filter(block => block.id !== blockId)
-      // If no blocks left, create a default text block
-      if (newBlocks.length === 0) {
-        return [{
-          id: Date.now(),
-          type: 'text',
-          content: '',
-          documentId: documentId,
-          position: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }]
-      }
+      // Allow empty blocks array - user can add blocks manually
       return newBlocks
     })
-  }, [documentId])
+  }, [])
 
   const handleAddBlock = useCallback((afterBlockId: number, type: string) => {
     setBlocks(prevBlocks => {
@@ -215,29 +202,10 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     }
   }, [])
 
-  const addNewBlock = useCallback(() => {
-    const lastBlock = blocks[blocks.length - 1]
-    if (lastBlock) {
-      handleAddBlock(lastBlock.id, 'text')
-    } else {
-      // If no blocks exist, create first block
-      const newBlock: Block = {
-        id: Date.now(),
-        type: 'text',
-        content: '',
-        documentId: documentId,
-        position: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      setBlocks([newBlock])
-    }
-  }, [blocks, handleAddBlock, documentId])
-
   // Auto-save functionality
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (document && blocks.length > 0) {
+      if (document) {
         saveDocument()
       }
     }, 1000)
@@ -268,7 +236,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       </div>
 
       {/* Editor */}
-      <div className="flex-1 p-4 pl-16">
+      <div className="flex-1 p-4 pl-20">
         <div className="max-w-4xl">
           <DndContext
             sensors={sensors}
@@ -293,18 +261,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
               ))}
             </SortableContext>
           </DndContext>
-          
-          {/* Add block button */}
-          <div className="group py-2">
-            <Button
-              variant="ghost"
-              onClick={addNewBlock}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add a block
-            </Button>
-          </div>
         </div>
       </div>
     </div>

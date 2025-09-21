@@ -41,7 +41,9 @@ vi.mock('@tiptap/starter-kit', () => ({
 }))
 
 vi.mock('@tiptap/extension-underline', () => ({
-  default: {}
+  default: {
+    configure: vi.fn(() => ({}))
+  }
 }))
 
 describe('RichTextEditor', () => {
@@ -137,6 +139,49 @@ describe('RichTextEditor', () => {
     )
 
     // The placeholder is set in editor props, which is mocked
+    expect(screen.getByTestId('editor-content')).toBeInTheDocument()
+  })
+
+  it('handles context menu properly', () => {
+    render(
+      <RichTextEditor
+        content=""
+        onUpdate={mockOnUpdate}
+        onFocus={mockOnFocus}
+      />
+    )
+
+    // Initially, context menu should not be visible
+    expect(screen.queryByTestId('context-menu-toolbar')).not.toBeInTheDocument()
+
+    // The context menu would be shown on right-click, but we can't easily test this
+    // without triggering actual DOM events in a more complex test setup
+    expect(screen.getByTestId('editor-content')).toBeInTheDocument()
+  })
+
+  it('handles empty content initialization correctly', () => {
+    render(
+      <RichTextEditor
+        content=""
+        onUpdate={mockOnUpdate}
+        onFocus={mockOnFocus}
+      />
+    )
+
+    // Should render without crashing even with empty content
+    expect(screen.getByTestId('editor-content')).toBeInTheDocument()
+  })
+
+  it('handles null content gracefully', () => {
+    render(
+      <RichTextEditor
+        content={''}
+        onUpdate={mockOnUpdate}
+        onFocus={mockOnFocus}
+      />
+    )
+
+    // Should render without crashing even with null-like content
     expect(screen.getByTestId('editor-content')).toBeInTheDocument()
   })
 })

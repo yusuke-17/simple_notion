@@ -12,9 +12,14 @@ function App() {
   const [currentDocumentId, setCurrentDocumentId] = useState<number | null>(null)
   const [showingSidebar, setShowingSidebar] = useState(true)
   const [documents, setDocuments] = useState<Document[]>([])
+  const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
-    checkAuth()
+    const initializeAuth = async () => {
+      await checkAuth()
+      setIsInitialized(true)
+    }
+    initializeAuth()
   }, [checkAuth])
 
   useEffect(() => {
@@ -82,6 +87,15 @@ function App() {
     } catch (error) {
       console.error('Failed to create document:', error)
     }
+  }
+
+  // 初期化が完了するまで待機
+  if (!isInitialized) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    )
   }
 
   if (!user) {

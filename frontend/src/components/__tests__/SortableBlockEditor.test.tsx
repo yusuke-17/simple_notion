@@ -66,8 +66,10 @@ describe('SortableBlockEditor Component', () => {
       />
     )
 
-    // RichTextEditorのコンテンツはparagraph要素内のテキストとして表示される
-    expect(screen.getByText('テストコンテンツ')).toBeInTheDocument()
+    // RichTextEditorのコンテンツはeditor-content内で表示される
+    const editorContent = screen.getByTestId('editor-content')
+    expect(editorContent).toBeInTheDocument()
+    expect(editorContent.querySelector('p')).toHaveTextContent('テストコンテンツ')
   })
 
   test('BlockEditorコンポーネントが正しいpropsを受け取る', () => {
@@ -79,12 +81,10 @@ describe('SortableBlockEditor Component', () => {
     )
 
     // BlockEditorが正常にレンダリングされているかテスト
-    // RichTextEditorのコンテンツをテキストとして確認
-    expect(screen.getByText('テストコンテンツ')).toBeInTheDocument()
-    
-    // RichTextEditorが表示されることを確認
-    const editorElement = screen.getByTestId('rich-text-editor')
-    expect(editorElement).toBeInTheDocument()
+    // RichTextEditorのコンテンツを確認
+    const editorContent = screen.getByTestId('editor-content')
+    expect(editorContent).toBeInTheDocument()
+    expect(editorContent.querySelector('p')).toHaveTextContent('テストコンテンツ')
   })
 
   test('ドラッグハンドルが存在する', () => {
@@ -95,8 +95,8 @@ describe('SortableBlockEditor Component', () => {
       />
     )
 
-    // RichTextEditor要素を取得してドラッグコンテナを確認
-    const editorElement = screen.getByTestId('rich-text-editor')
+    // エディター要素を取得してドラッグコンテナを確認
+    const editorElement = screen.getByTestId('editor-content')
     const blockContainer = editorElement.closest('.group')
     expect(blockContainer).toBeInTheDocument()
   })
@@ -131,8 +131,8 @@ describe('SortableBlockEditor Component', () => {
       />
     )
 
-    // RichTextEditorが表示されることを確認
-    const editorElement = screen.getByTestId('rich-text-editor')
+    // エディターが表示されることを確認
+    const editorElement = screen.getByTestId('editor-content')
     expect(editorElement).toBeInTheDocument()
   })
 })
