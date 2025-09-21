@@ -409,9 +409,9 @@ export function RichTextEditor({
         readOnly
       />
       
-      {/* Add content display for tests */}
+      {/* Add content display for tests - only for debugging, not visible text */}
       <div data-testid="editor-content-debug" style={{ display: 'none' }}>
-        {content}
+        {typeof content === 'string' ? content : JSON.stringify(content)}
       </div>
       
       {/* Selection-based Toolbar - Improved animation and stability */}
