@@ -47,7 +47,7 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
       })
       if (response.ok) {
         const data = await response.json()
-        setDocuments(data)
+        setDocuments(Array.isArray(data) ? data : [])
       } else {
         // エラー時は空配列を設定
         setDocuments([])
@@ -66,7 +66,7 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
       })
       if (response.ok) {
         const data = await response.json()
-        setTrashedDocuments(data)
+        setTrashedDocuments(Array.isArray(data) ? data : [])
       } else {
         // エラー時は空配列を設定
         setTrashedDocuments([])
@@ -166,6 +166,7 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
             variant="ghost"
             size="icon"
             onClick={onToggleSidebar}
+            aria-label="Toggle sidebar"
           >
             <Menu className="h-4 w-4" />
           </Button>
@@ -191,73 +192,98 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
               variant="ghost"
               size="sm"
               onClick={toggleTrash}
+              aria-label="Toggle trash view"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
 
           <div className="space-y-1">
-            {(showingTrash ? trashedDocuments : documents).map((doc) => (
-              <div
-                key={doc.id}
-                className={`p-2 rounded-md cursor-pointer transition-colors relative group ${
-                  currentDocumentId === doc.id
-                    ? 'bg-blue-100 text-blue-900'
-                    : 'hover:bg-gray-100'
-                }`}
-                onClick={() => !showingTrash && onDocumentSelect(doc.id)}
-                onMouseEnter={() => setHoveredDocId(doc.id)}
-                onMouseLeave={() => setHoveredDocId(null)}
-              >
-                <div className="text-sm font-medium truncate pr-8">
-                  {doc.title || 'Untitled'}
+            {showingTrash && (!trashedDocuments || trashedDocuments.length === 0) ? (
+              /* ゴミ箱が空の場合の表示 */
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <div className="mb-4">
+                  <Trash2 className="h-12 w-12 text-gray-300" />
                 </div>
-                <div className="text-xs text-gray-500">
-                  {(() => {
-                    if (!doc.updatedAt) return 'No date';
-                    const date = new Date(doc.updatedAt);
-                    return isNaN(date.getTime()) 
-                      ? 'Invalid date' 
-                      : date.toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'numeric',
-                          day: 'numeric'
-                        });
-                  })()}
-                </div>
-                
-                {/* 通常のドキュメントの削除ボタン（ホバー時表示） */}
-                {!showingTrash && hoveredDocId === doc.id && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => deleteDocument(doc.id, e)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                )}
-                
-                {showingTrash && (
-                  <div className="mt-2 flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => restoreDocument(doc.id)}
-                    >
-                      Restore
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => permanentDelete(doc.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                )}
+                <h3 className="text-sm font-medium text-gray-900 mb-2">
+                  ゴミ箱は空です
+                </h3>
+                <p className="text-xs text-gray-500 text-center mb-6 leading-relaxed">
+                  削除されたドキュメントは<br />
+                  ここに表示されます
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleTrash}
+                  className="text-xs"
+                >
+                  ドキュメント一覧に戻る
+                </Button>
               </div>
-            ))}
+            ) : (
+              (showingTrash ? (trashedDocuments || []) : documents).map((doc) => (
+                <div
+                  key={doc.id}
+                  className={`p-2 rounded-md cursor-pointer transition-colors relative group ${
+                    currentDocumentId === doc.id
+                      ? 'bg-blue-100 text-blue-900'
+                      : 'hover:bg-gray-100'
+                  }`}
+                  onClick={() => !showingTrash && onDocumentSelect(doc.id)}
+                  onMouseEnter={() => setHoveredDocId(doc.id)}
+                  onMouseLeave={() => setHoveredDocId(null)}
+                >
+                  <div className="text-sm font-medium truncate pr-8">
+                    {doc.title || 'Untitled'}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {(() => {
+                      if (!doc.updatedAt) return 'No date';
+                      const date = new Date(doc.updatedAt);
+                      return isNaN(date.getTime()) 
+                        ? 'Invalid date' 
+                        : date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'numeric',
+                            day: 'numeric'
+                          });
+                    })()}
+                  </div>
+                  
+                  {/* 通常のドキュメントの削除ボタン（ホバー時表示） */}
+                  {!showingTrash && hoveredDocId === doc.id && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => deleteDocument(doc.id, e)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                  
+                  {showingTrash && (
+                    <div className="mt-2 flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => restoreDocument(doc.id)}
+                      >
+                        Restore
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => permanentDelete(doc.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

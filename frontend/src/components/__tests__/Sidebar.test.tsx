@@ -214,9 +214,8 @@ describe('Sidebar Component', () => {
       expect(screen.getByText('First Document')).toBeInTheDocument()
     })
     
-    // メニューアイコンのボタンを探す（最初のアイコンボタン）
-    const iconButtons = screen.getAllByRole('button', { name: '' })
-    const toggleButton = iconButtons[0] // 最初のアイコンボタンがメニューボタン
+    // メニューアイコンのボタンを探す
+    const toggleButton = screen.getByRole('button', { name: 'Toggle sidebar' })
     await user.click(toggleButton)
     
     expect(mockOnToggleSidebar).toHaveBeenCalled()
@@ -232,9 +231,8 @@ describe('Sidebar Component', () => {
       expect(screen.getByText('First Document')).toBeInTheDocument()
     })
     
-    // ゴミ箱ボタンをクリック（2番目のアイコンボタン）
-    const buttons = screen.getAllByRole('button', { name: '' })
-    const trashToggleButton = buttons[1] // 2番目のアイコンボタンがゴミ箱ボタン
+    // ゴミ箱ボタンをクリック
+    const trashToggleButton = screen.getByRole('button', { name: 'Toggle trash view' })
     
     await user.click(trashToggleButton)
     
@@ -280,9 +278,8 @@ describe('Sidebar Component', () => {
       expect(screen.getByText('First Document')).toBeInTheDocument()
     })
     
-    // ゴミ箱表示に切り替え（2番目のアイコンボタン）
-    const buttons = screen.getAllByRole('button', { name: '' })
-    const trashToggleButton = buttons[1]
+    // ゴミ箱表示に切り替え
+    const trashToggleButton = screen.getByRole('button', { name: 'Toggle trash view' })
     
     await user.click(trashToggleButton)
     
@@ -313,9 +310,8 @@ describe('Sidebar Component', () => {
       expect(screen.getByText('First Document')).toBeInTheDocument()
     })
     
-    // ゴミ箱表示に切り替え（2番目のアイコンボタン）
-    const buttons = screen.getAllByRole('button', { name: '' })
-    const trashToggleButton = buttons[1]
+    // ゴミ箱表示に切り替え
+    const trashToggleButton = screen.getByRole('button', { name: 'Toggle trash view' })
     
     await user.click(trashToggleButton)
     
@@ -328,7 +324,7 @@ describe('Sidebar Component', () => {
     await user.click(deleteButton)
     
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith('/api/documents/3', {
+      expect(fetch).toHaveBeenCalledWith('/api/documents/3/permanent', {
         method: 'DELETE',
         credentials: 'include'
       })
@@ -346,9 +342,8 @@ describe('Sidebar Component', () => {
       expect(screen.getByText('First Document')).toBeInTheDocument()
     })
     
-    // ゴミ箱表示に切り替え（2番目のアイコンボタン）
-    const buttons = screen.getAllByRole('button', { name: '' })
-    const trashToggleButton = buttons[1]
+    // ゴミ箱表示に切り替え
+    const trashToggleButton = screen.getByRole('button', { name: 'Toggle trash view' })
     
     await user.click(trashToggleButton)
     
@@ -361,7 +356,7 @@ describe('Sidebar Component', () => {
     await user.click(deleteButton)
     
     // 削除APIが呼ばれないことを確認
-    expect(fetch).not.toHaveBeenCalledWith('/api/documents/3', {
+    expect(fetch).not.toHaveBeenCalledWith('/api/documents/3/permanent', {
       method: 'DELETE',
       credentials: 'include'
     })
@@ -535,6 +530,111 @@ describe('Sidebar Component', () => {
     // リストが更新されることを確認
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('ゴミ箱が空の場合は空状態画面が表示される', async () => {
+    // 空のゴミ箱データを返すfetchモックを設定
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      
+      if (url.includes('/api/documents?deleted=true')) {
+        return Promise.resolve({
+          ok: true,
+          json: vi.fn().mockResolvedValue([]), // 空の配列
+        } as unknown as Response)
+      } else if (url.includes('/api/documents')) {
+        return Promise.resolve({
+          ok: true,
+          json: vi.fn().mockResolvedValue(mockDocuments),
+        } as unknown as Response)
+      }
+      
+      return Promise.resolve({
+        ok: true,
+        json: vi.fn().mockResolvedValue([]),
+      } as unknown as Response)
+    })
+    
+    global.fetch = fetchMock
+
+    render(<Sidebar {...defaultProps} />)
+
+    // ゴミ箱ボタンをクリックしてゴミ箱ビューに切り替え
+    const trashButton = screen.getByRole('button', { name: 'Toggle trash view' })
+    await userEvent.click(trashButton)
+
+    // 空状態のメッセージが表示されることを確認
+    await waitFor(() => {
+      expect(screen.getByText('ゴミ箱は空です')).toBeInTheDocument()
+      expect(screen.getByText((_, node) => {
+        return node?.textContent === '削除されたドキュメントはここに表示されます'
+      })).toBeInTheDocument()
+    })
+
+    // 戻るボタンが表示されることを確認
+    expect(screen.getByRole('button', { name: 'ドキュメント一覧に戻る' })).toBeInTheDocument()
+
+    // 戻るボタンをクリックして通常ビューに戻ることを確認
+    const backButton = screen.getByRole('button', { name: 'ドキュメント一覧に戻る' })
+    await userEvent.click(backButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('All Documents')).toBeInTheDocument()
+      expect(screen.queryByText('ゴミ箱は空です')).not.toBeInTheDocument()
+    })
+  })
+
+  it('ゴミ箱にドキュメントがある場合は空状態画面が表示されない', async () => {
+    render(<Sidebar {...defaultProps} />)
+
+    // ゴミ箱ボタンをクリック
+    const trashButton = screen.getByRole('button', { name: 'Toggle trash view' })
+    await userEvent.click(trashButton)
+
+    // ゴミ箱のドキュメントが表示されることを確認
+    await waitFor(() => {
+      expect(screen.getByText('Trashed Document')).toBeInTheDocument()
+    })
+
+    // 空状態メッセージが表示されないことを確認
+    expect(screen.queryByText('ゴミ箱は空です')).not.toBeInTheDocument()
+  })
+
+  it('APIがnullを返した場合でもエラーにならない', async () => {
+    // nullを返すfetchモックを設定
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      
+      if (url.includes('/api/documents?deleted=true')) {
+        return Promise.resolve({
+          ok: true,
+          json: vi.fn().mockResolvedValue(null), // nullを返す
+        } as unknown as Response)
+      } else if (url.includes('/api/documents')) {
+        return Promise.resolve({
+          ok: true,
+          json: vi.fn().mockResolvedValue(null), // nullを返す
+        } as unknown as Response)
+      }
+      
+      return Promise.resolve({
+        ok: true,
+        json: vi.fn().mockResolvedValue([]),
+      } as unknown as Response)
+    })
+    
+    global.fetch = fetchMock
+
+    render(<Sidebar {...defaultProps} />)
+
+    // ゴミ箱ボタンをクリックしてもエラーが発生しないことを確認
+    const trashButton = screen.getByRole('button', { name: 'Toggle trash view' })
+    await userEvent.click(trashButton)
+
+    // エラーが発生せず、空状態が表示されることを確認
+    await waitFor(() => {
+      expect(screen.getByText('ゴミ箱は空です')).toBeInTheDocument()
     })
   })
 })
