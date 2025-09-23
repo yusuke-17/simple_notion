@@ -314,7 +314,7 @@ export function RichTextEditor({
     }
   }, [handleContextMenu, handleClickOutside])
 
-  // Optimized content synchronization - only when necessary
+  // Optimized content synchronization - only when necessary and avoid cursor disruption
   useEffect(() => {
     if (!editor || !isInitialized) return
     
@@ -324,12 +324,15 @@ export function RichTextEditor({
     const currentContent = JSON.stringify(editor.getJSON())
     const incomingContent = content || ''
     
-    // Skip if content is already synchronized
-    if (incomingContent === lastContentRef.current || incomingContent === currentContent) {
+    // More strict condition: Skip if content is already synchronized OR if editor has focus
+    // This prevents cursor position issues when user is actively typing
+    if (incomingContent === lastContentRef.current || 
+        incomingContent === currentContent ||
+        editor.isFocused) {
       return
     }
 
-    // Update editor content
+    // Update editor content only when really necessary
     isUpdatingRef.current = true
     try {
       const normalizedContent = normalizeContent(incomingContent)

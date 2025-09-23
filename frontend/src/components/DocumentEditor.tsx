@@ -30,6 +30,10 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const [document, setDocument] = useState<DocumentWithBlocks | null>(null)
   const [title, setTitle] = useState('')
   const [blocks, setBlocks] = useState<Block[]>([])
+  
+  // Keep track of original data for comparison
+  const [originalTitle, setOriginalTitle] = useState('')
+  const [originalBlocks, setOriginalBlocks] = useState<Block[]>([])
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -49,10 +53,13 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
           const doc = await response.json()
           setDocument(doc)
           setTitle(doc.title)
+          setOriginalTitle(doc.title) // Keep track of original title
           
           // Initialize blocks
           if (doc.blocks && doc.blocks.length > 0) {
-            setBlocks(doc.blocks.sort((a: Block, b: Block) => a.position - b.position))
+            const sortedBlocks = doc.blocks.sort((a: Block, b: Block) => a.position - b.position)
+            setBlocks(sortedBlocks)
+            setOriginalBlocks(sortedBlocks) // Keep track of original blocks
           } else {
             // Auto-create first block for immediate typing
             const initialBlock: Block = {
@@ -65,6 +72,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
               updatedAt: new Date().toISOString()
             }
             setBlocks([initialBlock])
+            setOriginalBlocks([initialBlock])
           }
         }
       } catch (error) {
@@ -100,8 +108,18 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       if (response.ok) {
         const updatedDoc = await response.json()
         setDocument(updatedDoc)
+        
+        // Update original data to reflect the saved state
+        setOriginalTitle(updatedDoc.title)
         if (updatedDoc.blocks) {
-          setBlocks(updatedDoc.blocks.sort((a: Block, b: Block) => a.position - b.position))
+          const sortedBlocks = updatedDoc.blocks.sort((a: Block, b: Block) => a.position - b.position)
+          setOriginalBlocks(sortedBlocks)
+          
+          // Only update blocks if there are actual changes from server
+          // to prevent unnecessary re-renders and cursor position issues
+          if (JSON.stringify(sortedBlocks) !== JSON.stringify(blocks)) {
+            setBlocks(sortedBlocks)
+          }
         }
         // Trigger document list refresh
         window.dispatchEvent(new CustomEvent('document-updated'))
@@ -123,9 +141,19 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
 
   const handleBlockDelete = useCallback((blockId: number) => {
     setBlocks(prevBlocks => {
+      // Prevent deleting the last remaining block or the first block (position 0)
+      if (prevBlocks.length <= 1) return prevBlocks
+      
+      const blockToDelete = prevBlocks.find(block => block.id === blockId)
+      if (blockToDelete && blockToDelete.position === 0 && prevBlocks.length > 1) {
+        // If trying to delete the first block but there are other blocks,
+        // don't delete it to maintain document structure
+        return prevBlocks
+      }
+      
       const newBlocks = prevBlocks.filter(block => block.id !== blockId)
-      // Allow empty blocks array - user can add blocks manually
-      return newBlocks
+      // Recalculate positions after deletion
+      return newBlocks.map((block, index) => ({ ...block, position: index }))
     })
   }, [])
 
@@ -202,16 +230,21 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     }
   }, [])
 
-  // Auto-save functionality
+  // Content-based auto-save - only save when content actually changes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (document) {
+    // Check if title or blocks have changed from original
+    const titleChanged = title !== originalTitle
+    const blocksChanged = JSON.stringify(blocks) !== JSON.stringify(originalBlocks)
+    
+    if (titleChanged || blocksChanged) {
+      // Debounce save to avoid excessive API calls
+      const timeoutId = setTimeout(() => {
         saveDocument()
-      }
-    }, 1000)
-
-    return () => clearTimeout(timer)
-  }, [title, blocks, document, saveDocument])
+      }, 500) // 500ms debounce
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [title, blocks, originalTitle, originalBlocks, saveDocument])
 
   if (!document) {
     return (
@@ -249,7 +282,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
             >
               {blocks.map((block) => (
                 <SortableBlockEditor
-                  key={block.id}
+                  key={`block-${block.id}-${block.position}`} // Stable key to prevent unnecessary re-renders
                   block={block}
                   onUpdate={handleBlockUpdate}
                   onDelete={handleBlockDelete}

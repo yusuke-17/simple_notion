@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { BlockEditor } from './BlockEditor'
+import { MemoizedBlockEditor } from '@/components/BlockEditor'
 import type { Block } from '@/types'
 
 interface SortableBlockEditorProps {
@@ -43,7 +43,7 @@ export function SortableBlockEditor({
       style={style}
       {...attributes}
     >
-      <BlockEditor
+      <MemoizedBlockEditor
         block={block}
         onUpdate={onUpdate}
         onDelete={onDelete}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, memo, type KeyboardEvent } from 'react'
 import { Input } from '@/components/ui/input'
 import { Trash2, GripVertical, Plus } from 'lucide-react'
 import { RichTextEditor } from '@/components/RichTextEditor'
@@ -54,7 +54,7 @@ export function BlockEditor({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       onAddBlock(block.id, 'text')
-    } else if (e.key === 'Backspace' && block.content === '') {
+    } else if (e.key === 'Backspace' && block.content === '' && block.position > 0) {
       e.preventDefault()
       onDelete(block.id)
     } else if (e.key === 'ArrowUp' && e.metaKey) {
@@ -80,7 +80,7 @@ export function BlockEditor({
       e.preventDefault()
       onAddBlock(block.id, 'text')
       return false // Prevent default
-    } else if (e.key === 'Backspace' && isEmpty) {
+    } else if (e.key === 'Backspace' && isEmpty && block.position > 0) {
       e.preventDefault()
       onDelete(block.id)
       return false // Prevent default
@@ -245,3 +245,14 @@ export function BlockEditor({
     </div>
   )
 }
+
+// Memoize BlockEditor to prevent unnecessary re-renders
+export const MemoizedBlockEditor = memo(BlockEditor, (prevProps, nextProps) => {
+  // Only re-render if block content, position, or type changes
+  return (
+    prevProps.block.id === nextProps.block.id &&
+    prevProps.block.content === nextProps.block.content &&
+    prevProps.block.type === nextProps.block.type &&
+    prevProps.block.position === nextProps.block.position
+  )
+})
