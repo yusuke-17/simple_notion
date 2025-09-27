@@ -54,7 +54,7 @@ func main() {
 	}
 
 	// ハンドラー初期化
-	authHandler := handlers.NewAuthHandler(userRepo, []byte(cfg.JWTSecret))
+	authHandler := handlers.NewAuthHandler(userRepo, []byte(cfg.JWTSecret), cfg)
 	docHandler := document.NewDocumentHandler(docRepo)
 
 	// ルーター設定

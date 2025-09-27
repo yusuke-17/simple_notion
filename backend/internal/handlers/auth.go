@@ -8,6 +8,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
+	"simple-notion-backend/internal/config"
 	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/models"
 	"simple-notion-backend/internal/repository"
@@ -24,20 +25,23 @@ type UserRepositoryInterface interface {
 type AuthHandler struct {
 	userRepo  UserRepositoryInterface
 	jwtSecret []byte
+	config    *config.Config
 }
 
-func NewAuthHandler(userRepo UserRepositoryInterface, jwtSecret []byte) *AuthHandler {
+func NewAuthHandler(userRepo UserRepositoryInterface, jwtSecret []byte, config *config.Config) *AuthHandler {
 	return &AuthHandler{
 		userRepo:  userRepo,
 		jwtSecret: jwtSecret,
+		config:    config,
 	}
 }
 
 // NewAuthHandlerFromRepo creates an AuthHandler with a concrete repository
-func NewAuthHandlerFromRepo(userRepo *repository.UserRepository, jwtSecret []byte) *AuthHandler {
+func NewAuthHandlerFromRepo(userRepo *repository.UserRepository, jwtSecret []byte, config *config.Config) *AuthHandler {
 	return &AuthHandler{
 		userRepo:  userRepo,
 		jwtSecret: jwtSecret,
+		config:    config,
 	}
 }
 
@@ -50,6 +54,33 @@ type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Name     string `json:"name"`
+}
+
+// createSecureCookie creates an HTTP cookie with secure settings based on environment
+func (h *AuthHandler) createSecureCookie(name, value string, maxAge int) *http.Cookie {
+	sameSiteMode := http.SameSiteLaxMode
+	if h.config.CookieSameSite == "strict" {
+		sameSiteMode = http.SameSiteStrictMode
+	} else if h.config.CookieSameSite == "none" {
+		sameSiteMode = http.SameSiteNoneMode
+	}
+
+	cookie := &http.Cookie{
+		Name:     name,
+		Value:    value,
+		Path:     "/",
+		HttpOnly: true,                  // XSS攻撃防止
+		Secure:   h.config.CookieSecure, // HTTPS環境でのみ送信
+		SameSite: sameSiteMode,          // CSRF攻撃防止
+		MaxAge:   maxAge,
+	}
+
+	// ドメイン設定がある場合は適用
+	if h.config.CookieDomain != "" {
+		cookie.Domain = h.config.CookieDomain
+	}
+
+	return cookie
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -82,15 +113,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
-		Value:    tokenString,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   false, // 開発環境用
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   86400, // 24時間
-	})
+	// セキュアなCookie設定を使用
+	cookie := h.createSecureCookie("auth_token", tokenString, 86400) // 24時間
+	http.SetCookie(w, cookie)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -142,15 +167,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
-		Value:    tokenString,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   86400,
-	})
+	// セキュアなCookie設定を使用
+	cookie := h.createSecureCookie("auth_token", tokenString, 86400) // 24時間
+	http.SetCookie(w, cookie)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -161,15 +180,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   -1,
-	})
+	// Cookieを削除するためにMaxAgeを-1に設定
+	cookie := h.createSecureCookie("auth_token", "", -1)
+	http.SetCookie(w, cookie)
 
 	w.WriteHeader(http.StatusOK)
 }

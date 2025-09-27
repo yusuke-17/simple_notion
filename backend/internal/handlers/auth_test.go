@@ -13,12 +13,23 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"simple-notion-backend/internal/config"
 	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/models"
 )
 
 // エラー定義
 var ErrUserExists = errors.New("user already exists")
+
+// createTestConfig creates a config for testing with secure settings disabled
+func createTestConfig() *config.Config {
+	return &config.Config{
+		Environment:    "development",
+		CookieSecure:   false,
+		CookieSameSite: "lax",
+		CookieDomain:   "",
+	}
+}
 
 // MockUserRepository は UserRepository のモック実装
 type MockUserRepository struct {
@@ -84,7 +95,8 @@ func TestAuthHandler_Login(t *testing.T) {
 	// テストデータのセットアップ
 	mockRepo := NewMockUserRepository()
 	jwtSecret := []byte("test-secret-key")
-	handler := NewAuthHandler(mockRepo, jwtSecret)
+	testConfig := createTestConfig()
+	handler := NewAuthHandler(mockRepo, jwtSecret, testConfig)
 
 	// テストユーザーの作成
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
@@ -193,7 +205,8 @@ func TestAuthHandler_Login(t *testing.T) {
 func TestAuthHandler_Register(t *testing.T) {
 	mockRepo := NewMockUserRepository()
 	jwtSecret := []byte("test-secret-key")
-	handler := NewAuthHandler(mockRepo, jwtSecret)
+	testConfig := createTestConfig()
+	handler := NewAuthHandler(mockRepo, jwtSecret, testConfig)
 
 	t.Run("successful registration", func(t *testing.T) {
 		registerReq := RegisterRequest{
@@ -296,7 +309,8 @@ func TestAuthHandler_Register(t *testing.T) {
 func TestAuthHandler_Logout(t *testing.T) {
 	mockRepo := NewMockUserRepository()
 	jwtSecret := []byte("test-secret-key")
-	handler := NewAuthHandler(mockRepo, jwtSecret)
+	testConfig := createTestConfig()
+	handler := NewAuthHandler(mockRepo, jwtSecret, testConfig)
 
 	t.Run("successful logout", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
@@ -328,7 +342,8 @@ func TestAuthHandler_Logout(t *testing.T) {
 func TestAuthHandler_Me(t *testing.T) {
 	mockRepo := NewMockUserRepository()
 	jwtSecret := []byte("test-secret-key")
-	handler := NewAuthHandler(mockRepo, jwtSecret)
+	testConfig := createTestConfig()
+	handler := NewAuthHandler(mockRepo, jwtSecret, testConfig)
 
 	// テストユーザーの作成
 	testUser := &models.User{
@@ -385,6 +400,144 @@ func TestAuthHandler_Me(t *testing.T) {
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Expected status code 404, got %d", w.Code)
+		}
+	})
+}
+
+// TestCookieSecuritySettings tests cookie security configurations
+func TestCookieSecuritySettings(t *testing.T) {
+	mockRepo := NewMockUserRepository()
+	jwtSecret := []byte("test-secret-key")
+
+	t.Run("development environment settings", func(t *testing.T) {
+		devConfig := &config.Config{
+			Environment:    "development",
+			CookieSecure:   false,
+			CookieSameSite: "lax",
+			CookieDomain:   "",
+		}
+		handler := NewAuthHandler(mockRepo, jwtSecret, devConfig)
+
+		// テストユーザーの作成
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+		testUser := &models.User{
+			ID:           1,
+			Email:        "test@example.com",
+			PasswordHash: string(hashedPassword),
+			Name:         "Test User",
+		}
+		mockRepo.users["test@example.com"] = testUser
+
+		loginReq := LoginRequest{
+			Email:    "test@example.com",
+			Password: "password123",
+		}
+		body, _ := json.Marshal(loginReq)
+		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		handler.Login(w, req)
+
+		// Cookieの設定を確認
+		cookies := w.Result().Cookies()
+		if len(cookies) == 0 {
+			t.Fatal("Expected auth_token cookie to be set")
+		}
+
+		cookie := cookies[0]
+		if cookie.Name != "auth_token" {
+			t.Errorf("Expected cookie name 'auth_token', got %s", cookie.Name)
+		}
+		if cookie.HttpOnly != true {
+			t.Error("Expected HttpOnly to be true")
+		}
+		if cookie.Secure != false {
+			t.Error("Expected Secure to be false in development")
+		}
+		if cookie.SameSite != http.SameSiteLaxMode {
+			t.Error("Expected SameSite to be Lax in development")
+		}
+	})
+
+	t.Run("production environment settings", func(t *testing.T) {
+		prodConfig := &config.Config{
+			Environment:    "production",
+			CookieSecure:   true,
+			CookieSameSite: "strict",
+			CookieDomain:   "example.com",
+		}
+		handler := NewAuthHandler(mockRepo, jwtSecret, prodConfig)
+
+		// テストユーザーの作成
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+		testUser := &models.User{
+			ID:           2,
+			Email:        "prod@example.com",
+			PasswordHash: string(hashedPassword),
+			Name:         "Prod User",
+		}
+		mockRepo.users["prod@example.com"] = testUser
+
+		loginReq := LoginRequest{
+			Email:    "prod@example.com",
+			Password: "password123",
+		}
+		body, _ := json.Marshal(loginReq)
+		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		handler.Login(w, req)
+
+		// Cookieの設定を確認
+		cookies := w.Result().Cookies()
+		if len(cookies) == 0 {
+			t.Fatal("Expected auth_token cookie to be set")
+		}
+
+		cookie := cookies[0]
+		if cookie.Name != "auth_token" {
+			t.Errorf("Expected cookie name 'auth_token', got %s", cookie.Name)
+		}
+		if cookie.HttpOnly != true {
+			t.Error("Expected HttpOnly to be true")
+		}
+		if cookie.Secure != true {
+			t.Error("Expected Secure to be true in production")
+		}
+		if cookie.SameSite != http.SameSiteStrictMode {
+			t.Error("Expected SameSite to be Strict in production")
+		}
+		if cookie.Domain != "example.com" {
+			t.Errorf("Expected Domain to be 'example.com', got %s", cookie.Domain)
+		}
+	})
+
+	t.Run("logout cookie deletion", func(t *testing.T) {
+		testConfig := createTestConfig()
+		handler := NewAuthHandler(mockRepo, jwtSecret, testConfig)
+
+		req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+		w := httptest.NewRecorder()
+
+		handler.Logout(w, req)
+
+		// Cookieの削除を確認
+		cookies := w.Result().Cookies()
+		if len(cookies) == 0 {
+			t.Fatal("Expected auth_token cookie to be set for deletion")
+		}
+
+		cookie := cookies[0]
+		if cookie.Name != "auth_token" {
+			t.Errorf("Expected cookie name 'auth_token', got %s", cookie.Name)
+		}
+		if cookie.MaxAge != -1 {
+			t.Errorf("Expected MaxAge to be -1 for deletion, got %d", cookie.MaxAge)
+		}
+		if cookie.Value != "" {
+			t.Errorf("Expected empty value for deletion, got %s", cookie.Value)
 		}
 	})
 }
