@@ -185,6 +185,72 @@ make clean         # コンテナとイメージの削除
 docker-compose logs -f
 ```
 
+## 🔍 開発時のCI/CD自動チェック
+
+### 自動実行される検証
+
+このプロジェクトでは、コード品質を保つために以下の自動チェックが設定されています：
+
+#### Git Hooks（自動実行）
+- **Pre-commit**: コミット時に軽量な検証を実行
+  - フロントエンド：ESLint、TypeScript型チェック
+  - バックエンド：Go fmt、Go vet、クイックテスト
+  - Docker設定ファイルの構文チェック
+
+- **Pre-push**: プッシュ時に包括的な検証を実行
+  - フロントエンド：全テスト、カバレッジ、ビルド
+  - バックエンド：全テスト、カバレッジ
+  - セキュリティチェック（秘密情報検出）
+  - GitHub Actions シミュレーション（actが利用可能な場合）
+
+#### 手動実行可能なコマンド
+```bash
+# 軽量なpre-commit相当のチェック
+make pre-commit
+
+# 包括的なpre-push相当のチェック  
+make pre-push
+
+# 完全なCI/CDパイプライン相当のチェック
+make ci
+
+# 個別のチェック
+make lint          # リント実行
+make test          # テスト実行
+make test-coverage # カバレッジ付きテスト
+make format        # コードフォーマット
+```
+
+#### Git Hooksのスキップ方法
+緊急時やデバッグ時には以下でフックをスキップできます：
+```bash
+# Pre-commitをスキップしてコミット
+git commit --no-verify
+
+# Pre-pushをスキップしてプッシュ
+git push --no-verify
+```
+
+⚠️ **注意**: フックをスキップした場合は、後で必ず修正してください！
+
+#### ローカルでGitHub Actionsを実行
+[act](https://github.com/nektos/act)を使用してローカルでGitHub Actionsを実行できます：
+
+```bash
+# actのインストール（macOS）
+brew install act
+
+# GitHub Actionsワークフローを確認
+act --list
+
+# 特定のジョブをローカル実行
+act --job frontend-tests
+act --job backend-tests
+
+# ドライラン（実際には実行せず、手順のみ表示）
+act --job frontend-tests -n
+```
+
 ### 3. 個別に開発する場合
 
 #### データベースのみDockerで起動

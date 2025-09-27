@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🚀 Running pre-push CI/CD checks..."
+
+# 既存のpre-pushフックを実行
+if [ -x ".git/hooks/pre-push" ]; then
+    .git/hooks/pre-push "$@"
+fi

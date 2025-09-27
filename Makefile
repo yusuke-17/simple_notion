@@ -167,6 +167,117 @@ watch:
 check: lint test
 	@echo "All checks passed! ✅"
 
+# Pre-commit checks (can be run manually)
+pre-commit:
+	@echo "🔍 Running pre-commit checks..."
+	@echo "This simulates what happens during git commit"
+	@echo ""
+	
+	@echo "1. Frontend lint and format check..."
+	@if [ -d "frontend" ]; then \
+		cd frontend && \
+		npm run lint && \
+		npx tsc --noEmit && \
+		echo "✅ Frontend checks passed"; \
+	else \
+		echo "⚠️  Frontend directory not found"; \
+	fi
+	@echo ""
+	
+	@echo "2. Backend format and vet check..."
+	@if [ -d "backend" ]; then \
+		cd backend && \
+		if [ -n "$$(gofmt -l . | grep -v vendor)" ]; then \
+			echo "❌ Go code is not formatted. Run 'make format' to fix."; \
+			gofmt -l . | grep -v vendor; \
+			exit 1; \
+		fi && \
+		go vet ./... && \
+		go test -short ./... && \
+		echo "✅ Backend checks passed"; \
+	else \
+		echo "⚠️  Backend directory not found"; \
+	fi
+	@echo ""
+	
+	@echo "3. Docker configuration check..."
+	@if [ -f "docker-compose.yml" ]; then \
+		docker compose -f docker-compose.yml config > /dev/null && \
+		echo "✅ docker-compose.yml is valid"; \
+	fi
+	@if [ -f "docker-compose.dev.yml" ]; then \
+		docker compose -f docker-compose.dev.yml config > /dev/null && \
+		echo "✅ docker-compose.dev.yml is valid"; \
+	fi
+	@echo ""
+	
+	@echo "🎉 Pre-commit checks completed successfully!"
+	@echo "Your changes are ready to commit! 🚀"
+
+# Pre-push checks (comprehensive CI/CD simulation)
+pre-push:
+	@echo "🚀 Running comprehensive pre-push checks..."
+	@echo "This simulates what happens in CI/CD pipeline"
+	@echo ""
+	
+	@echo "1. Frontend comprehensive tests..."
+	@if [ -d "frontend" ]; then \
+		cd frontend && \
+		npm ci > /dev/null 2>&1 && \
+		npm run lint && \
+		npx tsc --noEmit && \
+		npm run test:coverage && \
+		npm run build && \
+		echo "✅ Frontend comprehensive tests passed"; \
+	fi
+	@echo ""
+	
+	@echo "2. Backend comprehensive tests..."
+	@if [ -d "backend" ]; then \
+		cd backend && \
+		go mod download > /dev/null 2>&1 && \
+		go fmt ./... && \
+		go vet ./... && \
+		go test -v -race -coverprofile=coverage.out ./... && \
+		echo "✅ Backend comprehensive tests passed"; \
+	fi
+	@echo ""
+	
+	@echo "3. Security checks..."
+	@echo "Checking for potential secrets in recent commits..."
+	@if git log --oneline -n 5 | grep -i -E "(password|secret|key|token)" | grep -v -E "(SECRET_KEY|API_KEY)" > /dev/null; then \
+		echo "⚠️  Potential secret information detected in recent commits"; \
+	else \
+		echo "✅ No obvious secrets detected"; \
+	fi
+	@echo ""
+	
+	@echo "4. GitHub Actions simulation (if act is available)..."
+	@if command -v act > /dev/null 2>&1; then \
+		echo "Running GitHub Actions dry-run..."; \
+		act --list > /dev/null 2>&1 && \
+		act --job frontend-tests -n > /dev/null 2>&1 && \
+		act --job backend-tests -n > /dev/null 2>&1 && \
+		echo "✅ GitHub Actions simulation passed"; \
+	else \
+		echo "ℹ️  act not installed, skipping GitHub Actions simulation"; \
+		echo "   Install with: brew install act"; \
+	fi
+	@echo ""
+	
+	@echo "🎉 All pre-push checks completed successfully!"
+	@echo "Your changes are ready to push! 🚀🚀🚀"
+
+# CI/CD simulation (full pipeline)
+ci:
+	@echo "🎭 Running full CI/CD pipeline simulation..."
+	@$(MAKE) pre-commit
+	@echo ""
+	@$(MAKE) pre-push
+	@echo ""
+	@echo "🏆 Full CI/CD simulation completed successfully!"
+	@echo "This code is production ready! ✨"
+
 # 開発環境のセットアップ（初回）
 setup: install
 	@echo "Setting up development environment..."

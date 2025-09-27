@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Simple Notion pre-commit hook with lint-staged
+echo "🔍 Running lint-staged pre-commit checks..."
+
+# フロントエンドファイルがステージされているかチェック
+FRONTEND_STAGED=$(git diff --cached --name-only | grep "^frontend/" || true)
+
+if [ -n "$FRONTEND_STAGED" ]; then
+    echo "Frontend files detected, running lint-staged..."
+    # frontendディレクトリに移動してlint-stagedを実行
+    cd frontend
+    npx lint-staged
+    cd ..
+else
+    echo "No frontend files staged, skipping lint-staged"
+fi
+
+# 基本的なpre-commitチェックも実行
+if [ -x ".git/hooks/pre-commit" ]; then
+    echo "Running additional pre-commit checks..."
+    .git/hooks/pre-commit
+fi

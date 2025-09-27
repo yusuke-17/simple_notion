@@ -19,6 +19,14 @@ Thumbs.db
 tmp/
 temp/
 
+# テストカバレッジレポート
+coverage/
+*.out
+coverage.html
+
+# husky
+.husky/_
+
 # Docker関連
 .docker/
 

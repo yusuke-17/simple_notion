@@ -1,0 +1,12 @@
+# act設定ファイル
+# デフォルトのDockerイメージを指定
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# ログレベル
+--verbose
+
+# ネットワーク設定
+--network host
+
+# 環境変数（必要に応じて）
+--env VITE_API_BASE_URL=""
