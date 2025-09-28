@@ -11,7 +11,13 @@ interface SidebarProps {
   onToggleSidebar: () => void
 }
 
-export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete, showingSidebar, onToggleSidebar }: SidebarProps) {
+export function Sidebar({
+  currentDocumentId,
+  onDocumentSelect,
+  onDocumentDelete,
+  showingSidebar,
+  onToggleSidebar,
+}: SidebarProps) {
   const [documents, setDocuments] = useState<Document[]>([])
   const [showingTrash, setShowingTrash] = useState(false)
   const [trashedDocuments, setTrashedDocuments] = useState<Document[]>([])
@@ -33,7 +39,7 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
 
     window.addEventListener('document-updated', handleDocumentUpdate)
     window.addEventListener('document-deleted', handleDocumentDelete)
-    
+
     return () => {
       window.removeEventListener('document-updated', handleDocumentUpdate)
       window.removeEventListener('document-deleted', handleDocumentDelete)
@@ -43,7 +49,7 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
   const loadDocuments = async () => {
     try {
       const response = await fetch('/api/documents', {
-        credentials: 'include'
+        credentials: 'include',
       })
       if (response.ok) {
         const data = await response.json()
@@ -53,7 +59,9 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
         setDocuments([])
       }
     } catch (error) {
-      console.error('Failed to load documents:', error)
+      if (import.meta.env.DEV) {
+        console.error('Failed to load documents:', error)
+      }
       // エラー時は空配列を設定
       setDocuments([])
     }
@@ -62,7 +70,7 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
   const loadTrashedDocuments = async () => {
     try {
       const response = await fetch('/api/documents?deleted=true', {
-        credentials: 'include'
+        credentials: 'include',
       })
       if (response.ok) {
         const data = await response.json()
@@ -72,7 +80,9 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
         setTrashedDocuments([])
       }
     } catch (error) {
-      console.error('Failed to load trashed documents:', error)
+      if (import.meta.env.DEV) {
+        console.error('Failed to load trashed documents:', error)
+      }
       // エラー時は空配列を設定
       setTrashedDocuments([])
     }
@@ -86,18 +96,20 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
         body: JSON.stringify({
           title: 'Untitled',
           content: '',
-          parentId: null
+          parentId: null,
         }),
-        credentials: 'include'
+        credentials: 'include',
       })
-      
+
       if (response.ok) {
         const newDoc = await response.json()
         setDocuments(prev => [...prev, newDoc])
         onDocumentSelect(newDoc.id)
       }
     } catch (error) {
-      console.error('Failed to create document:', error)
+      if (import.meta.env.DEV) {
+        console.error('Failed to create document:', error)
+      }
     }
   }
 
@@ -108,16 +120,18 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
     try {
       await fetch(`/api/documents/${docId}`, {
         method: 'DELETE',
-        credentials: 'include'
+        credentials: 'include',
       })
-      
+
       // ドキュメントリストを更新
       await loadDocuments()
-      
+
       // 削除されたドキュメントが現在表示中の場合、前のドキュメントを表示
       onDocumentDelete(docId)
     } catch (error) {
-      console.error('Failed to delete document:', error)
+      if (import.meta.env.DEV) {
+        console.error('Failed to delete document:', error)
+      }
     }
   }
 
@@ -125,26 +139,31 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
     try {
       await fetch(`/api/documents/${docId}/restore`, {
         method: 'PUT',
-        credentials: 'include'
+        credentials: 'include',
       })
       await loadTrashedDocuments()
       await loadDocuments()
     } catch (error) {
-      console.error('Failed to restore document:', error)
+      if (import.meta.env.DEV) {
+        console.error('Failed to restore document:', error)
+      }
     }
   }
 
   const permanentDelete = async (docId: number) => {
-    if (!confirm('Permanently delete this document? This cannot be undone.')) return
+    if (!confirm('Permanently delete this document? This cannot be undone.'))
+      return
 
     try {
       await fetch(`/api/documents/${docId}/permanent`, {
         method: 'DELETE',
-        credentials: 'include'
+        credentials: 'include',
       })
       await loadTrashedDocuments()
     } catch (error) {
-      console.error('Failed to permanently delete document:', error)
+      if (import.meta.env.DEV) {
+        console.error('Failed to permanently delete document:', error)
+      }
     }
   }
 
@@ -171,12 +190,8 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
             <Menu className="h-4 w-4" />
           </Button>
         </div>
-        
-        <Button
-          onClick={createDocument}
-          className="w-full"
-          size="sm"
-        >
+
+        <Button onClick={createDocument} className="w-full" size="sm">
           <Plus className="h-4 w-4 mr-2" />
           New Document
         </Button>
@@ -199,7 +214,8 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
           </div>
 
           <div className="space-y-1">
-            {showingTrash && (!trashedDocuments || trashedDocuments.length === 0) ? (
+            {showingTrash &&
+            (!trashedDocuments || trashedDocuments.length === 0) ? (
               /* ゴミ箱が空の場合の表示 */
               <div className="flex flex-col items-center justify-center py-12 px-4">
                 <div className="mb-4">
@@ -209,7 +225,8 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
                   ゴミ箱は空です
                 </h3>
                 <p className="text-xs text-gray-500 text-center mb-6 leading-relaxed">
-                  削除されたドキュメントは<br />
+                  削除されたドキュメントは
+                  <br />
                   ここに表示されます
                 </p>
                 <Button
@@ -222,7 +239,7 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
                 </Button>
               </div>
             ) : (
-              (showingTrash ? (trashedDocuments || []) : documents).map((doc) => (
+              (showingTrash ? trashedDocuments || [] : documents).map(doc => (
                 <div
                   key={doc.id}
                   className={`p-2 rounded-md cursor-pointer transition-colors relative group ${
@@ -239,30 +256,30 @@ export function Sidebar({ currentDocumentId, onDocumentSelect, onDocumentDelete,
                   </div>
                   <div className="text-xs text-gray-500">
                     {(() => {
-                      if (!doc.updatedAt) return 'No date';
-                      const date = new Date(doc.updatedAt);
-                      return isNaN(date.getTime()) 
-                        ? 'Invalid date' 
+                      if (!doc.updatedAt) return 'No date'
+                      const date = new Date(doc.updatedAt)
+                      return isNaN(date.getTime())
+                        ? 'Invalid date'
                         : date.toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'numeric',
-                            day: 'numeric'
-                          });
+                            day: 'numeric',
+                          })
                     })()}
                   </div>
-                  
+
                   {/* 通常のドキュメントの削除ボタン（ホバー時表示） */}
                   {!showingTrash && hoveredDocId === doc.id && (
                     <Button
                       size="sm"
                       variant="ghost"
                       className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => deleteDocument(doc.id, e)}
+                      onClick={e => deleteDocument(doc.id, e)}
                     >
                       <X className="h-3 w-3" />
                     </Button>
                   )}
-                  
+
                   {showingTrash && (
                     <div className="mt-2 flex space-x-2">
                       <Button

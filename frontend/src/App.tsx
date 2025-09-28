@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/auth'
 import { Login } from '@/components/Login'
 import { Sidebar } from '@/components/Sidebar'
-import { DocumentEditor } from '@/components/DocumentEditor'  
+import { DocumentEditor } from '@/components/DocumentEditor'
 import { Button } from '@/components/ui/button'
 import { Menu, Plus } from 'lucide-react'
 import type { Document } from '@/types'
 
 function App() {
   const { user, checkAuth, logout } = useAuthStore()
-  const [currentDocumentId, setCurrentDocumentId] = useState<number | null>(null)
+  const [currentDocumentId, setCurrentDocumentId] = useState<number | null>(
+    null
+  )
   const [showingSidebar, setShowingSidebar] = useState(true)
   const [documents, setDocuments] = useState<Document[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
@@ -31,7 +33,7 @@ function App() {
   const loadDocuments = async () => {
     try {
       const response = await fetch('/api/documents', {
-        credentials: 'include'
+        credentials: 'include',
       })
       if (response.ok) {
         const data = await response.json()
@@ -40,7 +42,9 @@ function App() {
         setDocuments([])
       }
     } catch (error) {
-      console.error('Failed to load documents:', error)
+      if (import.meta.env.DEV) {
+        console.error('Failed to load documents:', error)
+      }
       setDocuments([])
     }
   }
@@ -48,8 +52,10 @@ function App() {
   const handleDocumentDelete = (deletedDocumentId: number) => {
     if (deletedDocumentId === currentDocumentId) {
       // 削除されたドキュメントが現在表示中の場合
-      const currentIndex = documents.findIndex(doc => doc.id === deletedDocumentId)
-      
+      const currentIndex = documents.findIndex(
+        doc => doc.id === deletedDocumentId
+      )
+
       if (currentIndex > 0) {
         // 前のドキュメントを表示
         setCurrentDocumentId(documents[currentIndex - 1].id)
@@ -61,7 +67,7 @@ function App() {
         setCurrentDocumentId(null)
       }
     }
-    
+
     // ドキュメントリストを更新
     loadDocuments()
   }
@@ -74,18 +80,20 @@ function App() {
         body: JSON.stringify({
           title: 'Untitled',
           content: '',
-          parentId: null
+          parentId: null,
         }),
-        credentials: 'include'
+        credentials: 'include',
       })
-      
+
       if (response.ok) {
         const newDoc = await response.json()
         await loadDocuments()
         setCurrentDocumentId(newDoc.id)
       }
     } catch (error) {
-      console.error('Failed to create document:', error)
+      if (import.meta.env.DEV) {
+        console.error('Failed to create document:', error)
+      }
     }
   }
 

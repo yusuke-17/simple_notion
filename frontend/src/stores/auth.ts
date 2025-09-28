@@ -12,7 +12,7 @@ interface AuthStore extends AuthState {
   setLoading: (loading: boolean) => void
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
+export const useAuthStore = create<AuthStore>(set => ({
   user: null,
   token: null,
   loading: false,
@@ -21,25 +21,25 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   login: async (email: string, password: string) => {
     set({ loading: true })
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-        credentials: 'include'
+        credentials: 'include',
       })
 
       if (!response.ok) {
         const error = await response.text()
         throw new Error(error || `Login failed (${response.status})`)
       }
-      
+
       const data = await response.json()
       set({
         user: data.user,
         token: data.token,
-        loading: false
+        loading: false,
       })
     } catch (error) {
       set({ loading: false })
@@ -49,25 +49,25 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   register: async (email: string, password: string, name: string) => {
     set({ loading: true })
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name }),
-        credentials: 'include'
+        credentials: 'include',
       })
 
       if (!response.ok) {
         const error = await response.text()
         throw new Error(error || `Registration failed (${response.status})`)
       }
-      
+
       const data = await response.json()
       set({
         user: data.user,
         token: data.token,
-        loading: false
+        loading: false,
       })
     } catch (error) {
       set({ loading: false })
@@ -78,42 +78,44 @@ export const useAuthStore = create<AuthStore>((set) => ({
   logout: async () => {
     await fetch(`${API_BASE_URL}/api/auth/logout`, {
       method: 'POST',
-      credentials: 'include'
+      credentials: 'include',
     })
-    
+
     set({
       user: null,
       token: null,
-      loading: false
+      loading: false,
     })
   },
 
   checkAuth: async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-        credentials: 'include'
+        credentials: 'include',
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         set({
           user: data.user,
-          token: data.token
+          token: data.token,
         })
       } else {
         // 認証失敗時は明示的にuser/tokenをnullに設定
         set({
           user: null,
-          token: null
+          token: null,
         })
       }
     } catch (error) {
-      console.error('Auth check failed:', error)
+      if (import.meta.env.DEV) {
+        console.error('Auth check failed:', error)
+      }
       // エラー時も明示的にuser/tokenをnullに設定
       set({
         user: null,
-        token: null
+        token: null,
       })
     }
-  }
+  },
 }))
