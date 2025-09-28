@@ -52,6 +52,7 @@ export function Sidebar({
           size="sm"
           onClick={onToggleSidebar}
           className="h-8 w-8 p-0"
+          aria-label="サイドバートグル"
         >
           <Menu className="h-4 w-4" />
         </Button>
@@ -64,6 +65,7 @@ export function Sidebar({
               onClick={createDocument}
               className="h-8 w-8 p-0"
               title="新しいドキュメント"
+              aria-label="新しいドキュメント"
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -73,6 +75,7 @@ export function Sidebar({
               onClick={toggleTrash}
               className="h-8 w-8 p-0"
               title={showingTrash ? 'ドキュメント一覧' : 'ゴミ箱'}
+              aria-label={showingTrash ? 'ドキュメント一覧' : 'ゴミ箱'}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -110,6 +113,7 @@ export function Sidebar({
                           onClick={() => restoreDocument(doc.id)}
                           className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
                           title="復元"
+                          aria-label="復元"
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -119,6 +123,7 @@ export function Sidebar({
                           onClick={() => permanentDelete(doc.id)}
                           className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700"
                           title="完全削除"
+                          aria-label="削除"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>

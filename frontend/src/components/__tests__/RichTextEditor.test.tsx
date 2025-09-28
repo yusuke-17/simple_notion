@@ -12,38 +12,44 @@ vi.mock('@tiptap/react', () => ({
       toggleBold: vi.fn(),
       toggleItalic: vi.fn(),
       toggleUnderline: vi.fn(),
-      toggleStrike: vi.fn()
+      toggleStrike: vi.fn(),
     },
     chain: vi.fn(() => ({
       focus: vi.fn(() => ({
         toggleBold: vi.fn(() => ({ run: vi.fn() })),
         toggleItalic: vi.fn(() => ({ run: vi.fn() })),
         toggleUnderline: vi.fn(() => ({ run: vi.fn() })),
-        toggleStrike: vi.fn(() => ({ run: vi.fn() }))
-      }))
+        toggleStrike: vi.fn(() => ({ run: vi.fn() })),
+      })),
     })),
-    isActive: vi.fn(() => false)
+    isActive: vi.fn(() => false),
   })),
-  EditorContent: ({ children }: { children: React.ReactNode }) => <div data-testid="editor-content">{children}</div>
+  EditorContent: ({ className }: { editor?: unknown; className?: string }) => (
+    <div className={className} data-testid="rich-text-editor">
+      <div className="tiptap ProseMirror">
+        <p>Mock editor content</p>
+      </div>
+    </div>
+  ),
 }))
 
 // Mock window.getSelection for selection-based toolbar testing
 const mockGetSelection = vi.fn()
 Object.defineProperty(window, 'getSelection', {
   writable: true,
-  value: mockGetSelection
+  value: mockGetSelection,
 })
 
 vi.mock('@tiptap/starter-kit', () => ({
   default: {
-    configure: vi.fn(() => ({}))
-  }
+    configure: vi.fn(() => ({})),
+  },
 }))
 
 vi.mock('@tiptap/extension-underline', () => ({
   default: {
-    configure: vi.fn(() => ({}))
-  }
+    configure: vi.fn(() => ({})),
+  },
 }))
 
 describe('RichTextEditor', () => {
@@ -56,7 +62,7 @@ describe('RichTextEditor', () => {
     mockGetSelection.mockReturnValue({
       isCollapsed: true,
       toString: () => '',
-      rangeCount: 0
+      rangeCount: 0,
     })
   })
 
@@ -70,7 +76,7 @@ describe('RichTextEditor', () => {
       />
     )
 
-    expect(screen.getByTestId('editor-content')).toBeInTheDocument()
+    expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument()
   })
 
   it('hides toolbar initially and shows on text selection', () => {
@@ -95,14 +101,14 @@ describe('RichTextEditor', () => {
           top: 100,
           left: 50,
           width: 100,
-          height: 20
-        })
-      })
+          height: 20,
+        }),
+      }),
     })
 
     // Note: In a real test environment, we would trigger the selection event
     // For now, we just verify the component structure exists
-    expect(screen.getByTestId('editor-content')).toBeInTheDocument()
+    expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument()
   })
 
   it('calls onUpdate when content changes', () => {
@@ -125,7 +131,7 @@ describe('RichTextEditor', () => {
 
     // Due to mocking, we can't test the actual onUpdate call,
     // but we can verify the component handles content prop changes
-    expect(screen.getByTestId('editor-content')).toBeInTheDocument()
+    expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument()
   })
 
   it('displays custom placeholder', () => {
@@ -139,7 +145,7 @@ describe('RichTextEditor', () => {
     )
 
     // The placeholder is set in editor props, which is mocked
-    expect(screen.getByTestId('editor-content')).toBeInTheDocument()
+    expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument()
   })
 
   it('handles context menu properly', () => {
@@ -156,7 +162,7 @@ describe('RichTextEditor', () => {
 
     // The context menu would be shown on right-click, but we can't easily test this
     // without triggering actual DOM events in a more complex test setup
-    expect(screen.getByTestId('editor-content')).toBeInTheDocument()
+    expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument()
   })
 
   it('handles empty content initialization correctly', () => {
@@ -169,7 +175,7 @@ describe('RichTextEditor', () => {
     )
 
     // Should render without crashing even with empty content
-    expect(screen.getByTestId('editor-content')).toBeInTheDocument()
+    expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument()
   })
 
   it('handles null content gracefully', () => {
@@ -182,6 +188,6 @@ describe('RichTextEditor', () => {
     )
 
     // Should render without crashing even with null-like content
-    expect(screen.getByTestId('editor-content')).toBeInTheDocument()
+    expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument()
   })
 })

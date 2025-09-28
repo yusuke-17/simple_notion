@@ -59,45 +59,40 @@ describe('SortableBlockEditor Component', () => {
   })
 
   test('レンダリングが正常に行われる', () => {
-    renderWithDndContext(
-      <SortableBlockEditor
-        block={mockBlock}
-        {...mockHandlers}
-      />
+    const { container } = renderWithDndContext(
+      <SortableBlockEditor block={mockBlock} {...mockHandlers} />
     )
 
-    // RichTextEditorのコンテンツはeditor-content内で表示される
-    const editorContent = screen.getByTestId('editor-content')
+    // RichTextEditorのコンテンツはProseMirror内で表示される
+    const editorContent = container.querySelector('.ProseMirror')
     expect(editorContent).toBeInTheDocument()
-    expect(editorContent.querySelector('p')).toHaveTextContent('テストコンテンツ')
+    expect(editorContent?.querySelector('p')).toHaveTextContent(
+      'テストコンテンツ'
+    )
   })
 
   test('BlockEditorコンポーネントが正しいpropsを受け取る', () => {
-    renderWithDndContext(
-      <SortableBlockEditor
-        block={mockBlock}
-        {...mockHandlers}
-      />
+    const { container } = renderWithDndContext(
+      <SortableBlockEditor block={mockBlock} {...mockHandlers} />
     )
 
     // BlockEditorが正常にレンダリングされているかテスト
     // RichTextEditorのコンテンツを確認
-    const editorContent = screen.getByTestId('editor-content')
+    const editorContent = container.querySelector('.ProseMirror')
     expect(editorContent).toBeInTheDocument()
-    expect(editorContent.querySelector('p')).toHaveTextContent('テストコンテンツ')
+    expect(editorContent?.querySelector('p')).toHaveTextContent(
+      'テストコンテンツ'
+    )
   })
 
   test('ドラッグハンドルが存在する', () => {
-    renderWithDndContext(
-      <SortableBlockEditor
-        block={mockBlock}
-        {...mockHandlers}
-      />
+    const { container } = renderWithDndContext(
+      <SortableBlockEditor block={mockBlock} {...mockHandlers} />
     )
 
     // エディター要素を取得してドラッグコンテナを確認
-    const editorElement = screen.getByTestId('editor-content')
-    const blockContainer = editorElement.closest('.group')
+    const editorElement = container.querySelector('.ProseMirror')
+    const blockContainer = editorElement?.closest('.group')
     expect(blockContainer).toBeInTheDocument()
   })
 
@@ -109,10 +104,7 @@ describe('SortableBlockEditor Component', () => {
     }
 
     renderWithDndContext(
-      <SortableBlockEditor
-        block={headingBlock}
-        {...mockHandlers}
-      />
+      <SortableBlockEditor block={headingBlock} {...mockHandlers} />
     )
 
     expect(screen.getByDisplayValue('テスト見出し')).toBeInTheDocument()
@@ -124,15 +116,12 @@ describe('SortableBlockEditor Component', () => {
       content: '',
     }
 
-    renderWithDndContext(
-      <SortableBlockEditor
-        block={emptyBlock}
-        {...mockHandlers}
-      />
+    const { container } = renderWithDndContext(
+      <SortableBlockEditor block={emptyBlock} {...mockHandlers} />
     )
 
     // エディターが表示されることを確認
-    const editorElement = screen.getByTestId('editor-content')
+    const editorElement = container.querySelector('.ProseMirror')
     expect(editorElement).toBeInTheDocument()
   })
 })
