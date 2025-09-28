@@ -27,6 +27,13 @@ Simple NotionはNotionクローンアプリケーションで、Go（バック�
 - 補助動詞（`isLoading`、`hasError`など）を用いた説明的な変数名を使用します
 - ROROパターン（Receive an Object, Return an Object）を必要に応じて使用します
 
+### 関数型プログラミング分離パターン（必須）
+- **ビジネスロジックとView層の完全分離**: すべてのReactコンポーネントは、カスタムHooksによってビジネスロジックとUIレンダリングを明確に分離する
+- **カスタムHooks設計**: 各コンポーネントに対応するカスタムHook（例：`useDocumentEditor`, `useRichTextEditor`, `useSidebar`）を作成し、状態管理、API通信、イベントハンドリングを集約する
+- **純粋関数によるユーティリティ層**: 複数のHooksで共有される処理は純粋関数として`utils/`ディレクトリに分離し、テスタブルで再利用可能にする
+- **コンポーネントのUI専用化**: Reactコンポーネントは「UIレンダリング専用」とし、JSX構造とユーザーインタラクションのみを担当する
+- **依存注入パターン**: Hooksはpropsとしてコールバック関数を受け取り、親コンポーネントとの疎結合を維持する
+
 ### 開発プロセス
 - 提案を行う際は、変更を個別のステップに分解し、各段階で小さなテストを提案して進行状況を確認します
 - コードを書く前に、既存のコードを深くレビューし、動作を記述します
@@ -121,10 +128,32 @@ Simple NotionはNotionクローンアプリケーションで、Go（バック�
 - Tailwind CSSとRadix UIベースの共通コンポーネントを使用
 
 ### プロジェクト構造
-- `src/components/`: Reactコンポーネント
+- `src/components/`: Reactコンポーネント（UIレンダリング専用）
+- `src/hooks/`: カスタムHooks（ビジネスロジック層）
+- `src/utils/`: 純粋関数ユーティリティ（再利用可能なロジック）
 - `src/stores/`: 状態管理
 - `src/types/`: TypeScript型定義
 - `src/tests/`: テストファイル
+
+#### 関数型分離アーキテクチャ
+```
+src/
+├── components/          # UI層（View専用）
+│   ├── DocumentEditor.tsx      # UIレンダリングのみ
+│   ├── RichTextEditor.tsx      # UIレンダリングのみ
+│   └── Sidebar.tsx            # UIレンダリングのみ
+├── hooks/              # ビジネスロジック層
+│   ├── useDocumentEditor.ts    # 文書編集の統合ロジック
+│   ├── useRichTextEditor.ts    # リッチテキストエディター管理
+│   ├── useBlockManager.ts      # ブロック操作管理
+│   ├── useAutoSave.ts         # 自動保存機能
+│   └── useSidebar.ts          # サイドバー管理
+└── utils/              # 純粋関数層
+    ├── blockUtils.ts          # ブロック操作の純粋関数
+    ├── documentUtils.ts       # 文書処理の純粋関数
+    ├── editorUtils.ts         # エディター関連ヘルパー
+    └── sidebarUtils.ts        # サイドバー用ユーティリティ
+```
 
 ## UIとスタイリング
 
@@ -247,9 +276,16 @@ Simple NotionはNotionクローンアプリケーションで、Go（バック�
 
 ## コード生成時の推奨事項
 - Copilotを使用する場合は、必ずSerena MCPを利用してプロジェクトの構造と規約を把握してからコード提案を行います
+- **関数型分離パターンの強制**: 新規コンポーネント作成時は必ずHooks（ビジネスロジック）とView（UIレンダリング）に分離する
+- **純粋関数の優先**: 複数箇所で使用される処理は純粋関数としてutils/に実装する
 - コードを修正する場合は、既存のテストコードを必ず確認し、修正に合わせてテストも更新します
 - テストコードが存在しない場合は、機能追加・修正と同時にテストコードを必ず追加します
-- 新しいコンポーネント作成時は型定義とテストファイルも同時に生成
+- 新しいコンポーネント作成時は以下を同時に生成:
+  - コンポーネント（View層）: `src/components/{ComponentName}.tsx`
+  - カスタムHook（ビジネスロジック層）: `src/hooks/use{ComponentName}.ts`
+  - ユーティリティ（必要に応じて）: `src/utils/{featureName}Utils.ts`
+  - テストファイル（各層に対応）
+  - 型定義の追加
 - APIハンドラー作成時は対応するテストケースも含める
 - データベースマイグレーション追加時は適切なロールバック処理も記述
 - エラーハンドリングは必ず含める
@@ -275,11 +311,21 @@ Simple NotionはNotionクローンアプリケーションで、Go（バック�
 - パスワードやAPIキーをハードコーディングしない
 - テストコードなしでの機能追加・修正は禁止
 - Serena MCPを使用せずにCopilotでコード提案を行うことは禁止
+- **モノリシックコンポーネントの作成禁止**: ビジネスロジックとUIが混在したコンポーネントの作成は禁止
+- **Hooks分離なしでの複雑なコンポーネント作成禁止**: 100行を超えるコンポーネントはHooks分離を必須とする
 
 ## ファイルパターン
-- React コンポーネント: `src/components/{ComponentName}.tsx`
+
+### フロントエンド（関数型分離アーキテクチャ）
+- React コンポーネント（View層）: `src/components/{ComponentName}.tsx`
+- カスタムHooks（ビジネスロジック層）: `src/hooks/use{FeatureName}.ts`
+- ユーティリティ関数（純粋関数層）: `src/utils/{featureName}Utils.ts`
 - React テスト: `src/components/__tests__/{ComponentName}.test.tsx`
+- Hooks テスト: `src/hooks/__tests__/use{FeatureName}.test.ts`
+- Utils テスト: `src/utils/__tests__/{featureName}Utils.test.ts`
 - 型定義: `src/types/index.ts`
+
+### バックエンド
 - Goハンドラー: `internal/handlers/{feature}.go`
 - Goテスト: `internal/handlers/{feature}_test.go`
 - Goモデル: `internal/models/{model}.go`
