@@ -5,11 +5,15 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Enable corepack and pnpm
+RUN corepack enable
+RUN corepack prepare pnpm@latest --activate
+
+# Copy package files (pnpm uses package.json and pnpm-lock.yaml)
+COPY package.json pnpm-lock.yaml* ./
 
 # Install dependencies (including devDependencies needed for build)
-RUN npm ci --no-audit --no-fund
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -19,7 +23,7 @@ ARG VITE_API_BASE_URL=""
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 # Build the application
-RUN npm run build
+RUN pnpm run build
 
 # Production stage
 FROM nginx:alpine AS production
