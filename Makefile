@@ -339,8 +339,56 @@ deploy: test lint build-prod prod-up
 ci: install lint test
 	@echo "CI checks completed successfully! ✅"
 
+# ===== セキュリティ関連コマンド =====
+
+# JWT秘密鍵を生成
+generate-jwt-secret:
+	@echo "Generating a secure JWT secret..."
+	@JWT_SECRET=$$(openssl rand -base64 64); \
+	echo "Generated JWT secret (copy this to your .env file):"; \
+	echo "JWT_SECRET=$$JWT_SECRET"; \
+	echo ""; \
+	echo "You can also add this directly to your .env file by running:"; \
+	echo "echo 'JWT_SECRET='$$JWT_SECRET >> .env"
+
+# 環境変数設定のヘルプ
+setup-env:
+	@echo "Setting up environment variables..."
+	@if [ ! -f .env ]; then \
+		echo "Creating .env file from .env.example..."; \
+		cp .env.example .env; \
+		echo ".env file created! Please edit it to set your JWT_SECRET and other variables."; \
+	else \
+		echo ".env file already exists."; \
+	fi
+	@echo ""
+	@echo "To generate a secure JWT secret, run: make generate-jwt-secret"
+	@echo "Then copy the generated JWT_SECRET to your .env file."
+
+# セキュリティチェック
+security-check:
+	@echo "Running security checks..."
+	@if [ -f .env ]; then \
+		if grep -q "CHANGE_THIS_TO_A_STRONG_RANDOM_KEY_IN_PRODUCTION" .env; then \
+			echo "⚠️  WARNING: Default JWT_SECRET detected in .env file!"; \
+			echo "Please run 'make generate-jwt-secret' and update your .env file."; \
+			exit 1; \
+		else \
+			echo "✅ JWT_SECRET appears to be customized."; \
+		fi; \
+		if grep -q "password" .env; then \
+			echo "⚠️  WARNING: Default passwords detected in .env file!"; \
+			echo "Please update POSTGRES_PASSWORD to a strong password."; \
+		fi; \
+	else \
+		echo "⚠️  WARNING: .env file not found!"; \
+		echo "Please run 'make setup-env' to create your environment configuration."; \
+		exit 1; \
+	fi
+	@echo "Security check completed! 🔒"
+
 # 開発者向けの一括チェック（コミット前）
-pre-commit: format lint test
+pre-commit: format lint test security-check
 	@echo "Pre-commit checks completed! Ready to commit! 💫"
 
 # 全ての環境を停止
@@ -397,6 +445,11 @@ help:
 	@echo "  lint         - コード品質チェック（リンター実行）"
 	@echo "  format       - コードフォーマット"
 	@echo "  check        - 総合的なコード品質チェック（lint + test）"
+	@echo ""
+	@echo "=== セキュリティ ==="
+	@echo "  generate-jwt-secret - 安全なJWT秘密鍵を生成"
+	@echo "  setup-env    - 環境変数ファイル（.env）の初期設定"
+	@echo "  security-check - セキュリティ設定の確認"
 	@echo ""
 	@echo "=== 依存関係管理 ==="
 	@echo "  deps-update  - 依存関係の更新"

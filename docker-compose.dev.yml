@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: notion_app
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5432:5432"
     volumes:
@@ -30,10 +30,11 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://postgres:password@db:5432/notion_app?sslmode=disable
-      JWT_SECRET: dev-secret-key-not-for-production
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@db:5432/notion_app?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_STRONG_RANDOM_KEY_IN_PRODUCTION}
       PORT: 8080
       GIN_MODE: debug
+      ENVIRONMENT: development
     volumes:
       - ./backend:/app
       - /app/tmp
