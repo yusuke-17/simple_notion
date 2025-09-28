@@ -91,6 +91,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
             onChange={e => updateTitle(e.target.value)}
             placeholder="Untitled"
             className="text-2xl font-bold border-none p-0 h-auto bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+            data-testid="document-title-input"
           />
         </div>
       </div>

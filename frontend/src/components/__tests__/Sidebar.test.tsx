@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   vi,
@@ -291,13 +291,17 @@ describe('Sidebar Component', () => {
 
     // ドキュメントアイテムにホバーして復元ボタンを表示
     const docItem = screen.getByText('Trashed Document').closest('div')!
-    await user.hover(docItem)
 
-    // 復元ボタンをクリック（ボタンが表示されるのを待つ）
-    await waitFor(async () => {
-      const restoreButton = screen.getByRole('button', { name: '復元' })
-      await user.click(restoreButton)
-    })
+    // mouseenter イベントを直接発火してホバー状態を作る
+    fireEvent.mouseEnter(docItem)
+
+    // 復元ボタンが表示されるのを待つ
+    const restoreButton = await waitFor(() =>
+      screen.getByRole('button', { name: '復元' })
+    )
+
+    // 復元ボタンをクリック
+    await user.click(restoreButton)
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith('/api/documents/3/restore', {
@@ -329,13 +333,17 @@ describe('Sidebar Component', () => {
 
     // ドキュメントアイテムにホバーして削除ボタンを表示
     const docItem = screen.getByText('Trashed Document').closest('div')!
-    await user.hover(docItem)
 
-    // 削除ボタンをクリック（ボタンが表示されるのを待つ）
-    await waitFor(async () => {
-      const deleteButton = screen.getByRole('button', { name: '削除' })
-      await user.click(deleteButton)
-    })
+    // mouseenter イベントを直接発火してホバー状態を作る
+    fireEvent.mouseEnter(docItem)
+
+    // 削除ボタンが表示されるのを待つ
+    const deleteButton = await waitFor(() =>
+      screen.getByRole('button', { name: '削除' })
+    )
+
+    // 削除ボタンをクリック
+    await user.click(deleteButton)
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith('/api/documents/3/permanent', {

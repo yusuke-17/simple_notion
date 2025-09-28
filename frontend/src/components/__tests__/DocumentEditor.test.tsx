@@ -1,9 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import {
   describe,
   it,
   beforeEach,
+  afterEach,
   expect,
   vi,
   type MockedFunction,
@@ -36,11 +36,16 @@ describe('DocumentEditor Component', () => {
     vi.clearAllMocks()
     mockDispatchEvent.mockClear()
 
-    // デフォルトのfetchモックを設定
+    // デフォルトのfetchモックを設定（すべてのテストで使用）
     ;(fetch as MockedFunction<typeof fetch>).mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue(mockDocument),
     } as unknown as Response)
+  })
+
+  afterEach(() => {
+    // 各テスト後にモックをクリア
+    vi.clearAllMocks()
   })
 
   it('ドキュメントが正しく読み込まれ、初期ブロックが自動作成される', async () => {
@@ -59,27 +64,50 @@ describe('DocumentEditor Component', () => {
     })
   })
 
-  it('ローディング中は適切な表示がされる', () => {
-    ;(fetch as MockedFunction<typeof fetch>).mockImplementation(
-      () => new Promise(() => {}) // 永続的にpendingにする
-    )
+  describe('Loading State', () => {
+    it('ローディング中は適切な表示がされる', () => {
+      ;(fetch as MockedFunction<typeof fetch>).mockImplementation(
+        () => new Promise(() => {}) // 永続的にpendingにする
+      )
 
-    render(<DocumentEditor documentId={1} />)
+      render(<DocumentEditor documentId={1} />)
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+      expect(screen.getByText('Loading...')).toBeInTheDocument()
+    })
   })
 
   it('タイトルを編集できる', async () => {
-    const user = userEvent.setup()
+    // テスト開始前にモックを明確にリセット
+    vi.clearAllMocks()
+
+    // fetchモックをより現実的に設定
+    ;(fetch as MockedFunction<typeof fetch>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: vi.fn().mockResolvedValue(mockDocument),
+      text: vi.fn().mockResolvedValue(JSON.stringify(mockDocument)),
+    } as unknown as Response)
+
     render(<DocumentEditor documentId={1} />)
 
+    // ローディングが完了し、タイトルが表示されるまで待機
     await waitFor(() => {
-      expect(screen.getByDisplayValue('Test Document')).toBeInTheDocument()
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
     })
 
-    const titleInput = screen.getByDisplayValue('Test Document')
-    await user.clear(titleInput)
-    await user.type(titleInput, 'Updated Title')
+    const titleInput = await waitFor(() =>
+      screen.getByTestId('document-title-input')
+    )
+
+    // タイトルが正しく設定されているか確認
+    await waitFor(() => {
+      expect(titleInput).toHaveValue('Test Document')
+    })
+
+    // 直接値を変更してchangeイベントを発火
+    fireEvent.change(titleInput, { target: { value: 'Updated Title' } })
 
     expect(titleInput).toHaveValue('Updated Title')
   })
