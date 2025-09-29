@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Block } from '@/types'
 import type { DragEndEvent } from '@dnd-kit/core'
 import {
@@ -30,6 +30,25 @@ export const useDocumentEditor = (documentId: number) => {
   // Initialize block manager
   const blockManager = useBlockManager([], documentId)
 
+  // blockManagerへの参照を保持して無限ループを回避
+  const blockManagerRef = useRef(blockManager)
+  blockManagerRef.current = blockManager
+
+  /**
+   * Handle successful save - update original data
+   * useCallbackで安定化して無限ループを回避
+   */
+  const handleSaveSuccess = useCallback((updatedDoc: DocumentWithBlocks) => {
+    setDocument(updatedDoc)
+    setOriginalTitle(updatedDoc.title)
+
+    if (updatedDoc.blocks) {
+      const sortedBlocks = sortBlocksByPosition(updatedDoc.blocks)
+      setOriginalBlocks(sortedBlocks)
+      blockManagerRef.current.syncWithServer(sortedBlocks)
+    }
+  }, []) // blockManager依存関係を削除
+
   // Auto-save functionality
   const { saveNow, hasUnsavedChanges, isSaving } = useAutoSave(
     documentId,
@@ -39,20 +58,6 @@ export const useDocumentEditor = (documentId: number) => {
     originalBlocks,
     handleSaveSuccess
   )
-
-  /**
-   * Handle successful save - update original data
-   */
-  function handleSaveSuccess(updatedDoc: DocumentWithBlocks) {
-    setDocument(updatedDoc)
-    setOriginalTitle(updatedDoc.title)
-
-    if (updatedDoc.blocks) {
-      const sortedBlocks = sortBlocksByPosition(updatedDoc.blocks)
-      setOriginalBlocks(sortedBlocks)
-      blockManager.syncWithServer(sortedBlocks)
-    }
-  }
 
   /**
    * Load document from server
@@ -74,13 +79,13 @@ export const useDocumentEditor = (documentId: number) => {
       if (doc.blocks && doc.blocks.length > 0) {
         const sortedBlocks = sortBlocksByPosition(doc.blocks)
         setOriginalBlocks(sortedBlocks)
-        blockManager.initializeBlocks(sortedBlocks)
+        blockManagerRef.current.initializeBlocks(sortedBlocks)
       } else {
         // Auto-create first block for immediate typing
         const initialBlock = createInitialBlock(documentId)
         const initialBlocks = [initialBlock]
         setOriginalBlocks(initialBlocks)
-        blockManager.initializeBlocks(initialBlocks)
+        blockManagerRef.current.initializeBlocks(initialBlocks)
       }
     } catch (err) {
       const errorMessage =
@@ -93,7 +98,7 @@ export const useDocumentEditor = (documentId: number) => {
     } finally {
       setIsLoading(false)
     }
-  }, [documentId, blockManager])
+  }, [documentId]) // blockManager依存関係を削除
 
   /**
    * Update document title
@@ -114,8 +119,8 @@ export const useDocumentEditor = (documentId: number) => {
    */
   const resetDocument = useCallback(() => {
     setTitle(originalTitle)
-    blockManager.resetBlocks()
-  }, [originalTitle, blockManager])
+    blockManagerRef.current.resetBlocks()
+  }, [originalTitle]) // blockManager依存関係を削除
 
   // Load document on mount and when documentId changes
   useEffect(() => {

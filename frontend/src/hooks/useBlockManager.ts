@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import type { Block } from '@/types'
 import {
   updateBlockContent,
@@ -17,6 +17,14 @@ import {
  */
 export const useBlockManager = (initialBlocks: Block[], documentId: number) => {
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks)
+
+  // useRefでcurrent blocksにアクセスし、無限ループを回避
+  const blocksRef = useRef<Block[]>(blocks)
+
+  // blocks が更新されるたびに ref を更新
+  useEffect(() => {
+    blocksRef.current = blocks
+  }, [blocks])
 
   /**
    * Update block content and optionally type
@@ -117,6 +125,7 @@ export const useBlockManager = (initialBlocks: Block[], documentId: number) => {
 
   /**
    * Update blocks from server (for after save operations)
+   * 修正: useRefを使用して無限ループを回避
    */
   const syncWithServer = useCallback(
     (serverBlocks: Block[]) => {
@@ -125,14 +134,14 @@ export const useBlockManager = (initialBlocks: Block[], documentId: number) => {
           (a, b) => a.position - b.position
         )
 
-        // Only update if there are actual changes from server
-        // to prevent unnecessary re-renders and cursor position issues
-        if (JSON.stringify(sortedBlocks) !== JSON.stringify(blocks)) {
+        // refを使用して現在のblocksと比較（無限ループを回避）
+        const currentBlocks = blocksRef.current
+        if (JSON.stringify(sortedBlocks) !== JSON.stringify(currentBlocks)) {
           setBlocks(sortedBlocks)
         }
       }
     },
-    [blocks]
+    [] // 依存配列からblocksを削除して無限ループを回避
   )
 
   /**
