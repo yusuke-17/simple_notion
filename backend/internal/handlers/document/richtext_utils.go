@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-// RichTextContent represents the TipTap JSON structure
+// RichTextContent は TipTap JSON構造を表します
 type RichTextContent struct {
 	Type    string                 `json:"type"`
 	Content []RichTextNode         `json:"content,omitempty"`
 	Attrs   map[string]interface{} `json:"attrs,omitempty"`
 }
 
-// RichTextNode represents a node in TipTap JSON structure
+// RichTextNode は TipTap JSON構造内のノードを表します
 type RichTextNode struct {
 	Type    string                 `json:"type"`
 	Content []RichTextNode         `json:"content,omitempty"`
@@ -22,52 +22,52 @@ type RichTextNode struct {
 	Attrs   map[string]interface{} `json:"attrs,omitempty"`
 }
 
-// RichTextMark represents inline formatting marks
+// RichTextMark は インライン書式マークを表します
 type RichTextMark struct {
 	Type  string                 `json:"type"`
 	Attrs map[string]interface{} `json:"attrs,omitempty"`
 }
 
-// IsRichTextContent checks if the content string is in TipTap JSON format
+// IsRichTextContent は コンテンツ文字列がTipTap JSON形式かどうかを確認します
 func IsRichTextContent(content string) bool {
 	if content == "" {
 		return false
 	}
 
-	// Quick check: does it start with TipTap document structure?
+	// クイックチェック: TipTapドキュメント構造で始まるかどうか
 	if !strings.HasPrefix(strings.TrimSpace(content), `{"type":"doc"`) {
 		return false
 	}
 
-	// Try to parse as JSON to ensure it's valid TipTap format
+	// 有効なTipTap形式であることを確認するためにJSONとして解析を試行
 	var richContent RichTextContent
 	if err := json.Unmarshal([]byte(content), &richContent); err != nil {
 		return false
 	}
 
-	// Validate that it has the expected TipTap structure
+	// 期待されるTipTap構造を持っていることを検証
 	return richContent.Type == "doc"
 }
 
-// ConvertPlainTextToRichText converts plain text to TipTap JSON format
+// ConvertPlainTextToRichText は プレーンテキストをTipTap JSON形式に変換します
 func ConvertPlainTextToRichText(plainText string) string {
 	if plainText == "" {
 		return `{"type":"doc","content":[]}`
 	}
 
-	// Split by newlines and create paragraphs
+	// 改行で分割して段落を作成
 	lines := strings.Split(plainText, "\n")
 	var paragraphs []RichTextNode
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
-			// Empty paragraph
+			// 空の段落
 			paragraphs = append(paragraphs, RichTextNode{
 				Type: "paragraph",
 			})
 		} else {
-			// Paragraph with text
+			// テキスト付き段落
 			paragraphs = append(paragraphs, RichTextNode{
 				Type: "paragraph",
 				Content: []RichTextNode{
@@ -89,7 +89,7 @@ func ConvertPlainTextToRichText(plainText string) string {
 	return string(jsonBytes)
 }
 
-// ExtractPlainTextFromRichText extracts plain text from TipTap JSON format
+// ExtractPlainTextFromRichText は TipTap JSON形式からプレーンテキストを抽出します
 func ExtractPlainTextFromRichText(richTextJSON string) string {
 	if !IsRichTextContent(richTextJSON) {
 		return richTextJSON
@@ -105,7 +105,7 @@ func ExtractPlainTextFromRichText(richTextJSON string) string {
 	return strings.TrimSpace(result.String())
 }
 
-// extractTextFromNodes recursively extracts text from TipTap nodes
+// extractTextFromNodes は TipTapノードから再帰的にテキストを抽出します
 func extractTextFromNodes(nodes []RichTextNode, result *strings.Builder) {
 	for i, node := range nodes {
 		if node.Text != "" {
@@ -116,32 +116,32 @@ func extractTextFromNodes(nodes []RichTextNode, result *strings.Builder) {
 			extractTextFromNodes(node.Content, result)
 		}
 
-		// Add line break between paragraphs (except for the last one)
+		// 段落間に改行を追加（最後のもの以外）
 		if node.Type == "paragraph" && i < len(nodes)-1 {
 			result.WriteString("\n")
 		}
 	}
 }
 
-// ValidateRichTextJSON validates that the JSON is valid TipTap format
+// ValidateRichTextJSON は JSONが有効なTipTap形式かどうかを検証します
 func ValidateRichTextJSON(content string) error {
 	if content == "" {
-		return nil // Empty content is valid
+		return nil // 空のコンテンツは有効
 	}
 
-	// If it doesn't look like JSON, it's probably plain text - no validation needed
+	// JSONのように見えない場合は、おそらくプレーンテキスト - 検証不要
 	if !strings.HasPrefix(strings.TrimSpace(content), "{") {
 		return nil
 	}
 
-	// Try to parse as JSON
+	// JSONとして解析を試行
 	var richContent RichTextContent
 	if err := json.Unmarshal([]byte(content), &richContent); err != nil {
-		// If JSON parsing fails, assume it's intended as rich text but malformed
+		// JSON解析が失敗した場合、リッチテキストを意図しているが形式が不正と仮定
 		return fmt.Errorf("invalid JSON format: %w", err)
 	}
 
-	// If it's valid JSON but not TipTap format (no "type" field or wrong type)
+	// 有効なJSONだがTipTap形式でない場合（"type"フィールドがないか間違ったtype）
 	if richContent.Type != "doc" {
 		return fmt.Errorf("invalid TipTap format: root type must be 'doc', got '%s'", richContent.Type)
 	}

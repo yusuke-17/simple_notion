@@ -20,18 +20,18 @@ interface DocumentEditorProps {
 }
 
 export function DocumentEditor({ documentId }: DocumentEditorProps) {
-  // Use our custom hook that encapsulates all business logic
+  // 全てのビジネスロジックをカプセル化したカスタムフックを使用
   const {
-    // Document state
+    // ドキュメント状態
     document,
     title,
     isLoading,
     error,
 
-    // Title management
+    // タイトル管理
     updateTitle,
 
-    // Block management
+    // ブロック管理
     blocks,
     handleBlockUpdate,
     handleBlockDelete,
@@ -41,7 +41,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     handleDragEnd,
   } = useDocumentEditor(documentId)
 
-  // Drag and drop sensors
+  // ドラッグ&ドロップセンサー
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -49,12 +49,12 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     })
   )
 
-  // Handle focus events (placeholder for future features)
+  // フォーカスイベントを処理（将来の機能のためのプレースホルダー）
   const handleBlockFocus = () => {
-    // Currently unused, but kept for future features like focus management
+    // 現在は未使用だが、フォーカス管理などの将来の機能のために保持
   }
 
-  // Loading state
+  // ローディング状態
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -63,7 +63,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     )
   }
 
-  // Error state
+  // エラー状態
   if (error) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -72,7 +72,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     )
   }
 
-  // Document not found
+  // ドキュメントが見つかりません
   if (!document) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -83,7 +83,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      {/* ヘッダー */}
       <div className="border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
           <Input
@@ -96,7 +96,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
         </div>
       </div>
 
-      {/* Editor */}
+      {/* エディター */}
       <div className="flex-1 p-4 pl-20">
         <div className="max-w-4xl">
           <DndContext
@@ -110,7 +110,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
             >
               {blocks.map(block => (
                 <SortableBlockEditor
-                  key={`block-${block.id}-${block.position}`} // Stable key to prevent unnecessary re-renders
+                  key={`block-${block.id}-${block.position}`} // 不要な再レンダリングを防ぐための安定したキー
                   block={block}
                   onUpdate={handleBlockUpdate}
                   onDelete={handleBlockDelete}

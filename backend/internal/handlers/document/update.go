@@ -32,13 +32,13 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Validate rich text JSON if applicable
+	// 該当する場合はリッチテキストJSONを検証
 	if err := ValidateRichTextJSON(req.Content); err != nil {
 		http.Error(w, "Invalid rich text content", http.StatusBadRequest)
 		return
 	}
 
-	// Validate block content for rich text format
+	// ブロックコンテンツのリッチテキスト形式を検証
 	for i, block := range req.Blocks {
 		if content, ok := block.Content.(string); ok {
 			if err := ValidateRichTextJSON(content); err != nil {

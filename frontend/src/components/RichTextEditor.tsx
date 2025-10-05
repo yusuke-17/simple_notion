@@ -19,9 +19,9 @@ interface RichTextEditorProps {
 }
 
 /**
- * Rich Text Editor View Component
- * Pure UI component focused on rendering and user interactions
- * Business logic has been moved to useRichTextEditor hook
+ * リッチテキストエディタービューコンポーネント
+ * レンダリングとユーザーインタラクションに特化した純粋なUIコンポーネント
+ * ビジネスロジックはuseRichTextEditorフックに移動済み
  */
 export function RichTextEditor({
   content,
@@ -31,7 +31,7 @@ export function RichTextEditor({
   onFocus,
   onKeyDown,
 }: RichTextEditorProps) {
-  // Hook encapsulates all rich text editor logic
+  // フックが全てのリッチテキストエディターロジックをカプセル化
   const {
     editor,
     editorRef,
@@ -54,14 +54,14 @@ export function RichTextEditor({
 
   return (
     <div className="relative">
-      {/* Main editor */}
+      {/* メインエディター */}
       <div ref={editorRef} className="relative">
         <EditorContent
           editor={editor}
           className={`prose prose-sm focus-within:outline-none max-w-none ${className}`}
         />
 
-        {/* Floating toolbar for text formatting */}
+        {/* テキスト書式用フローティングツールバー */}
         {showToolbar && (
           <div
             className="absolute z-10 bg-white border border-gray-200 rounded shadow-lg p-1 flex space-x-1"

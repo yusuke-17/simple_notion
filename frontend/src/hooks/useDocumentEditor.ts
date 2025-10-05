@@ -13,21 +13,21 @@ import { useBlockManager } from './useBlockManager'
 import { useAutoSave } from './useAutoSave'
 
 /**
- * Document editor hook
- * Manages document loading, title, and integrates block management with auto-save
+ * ドキュメントエディターフック
+ * ドキュメントの読み込み、タイトル管理、ブロック管理と自動保存の統合を管理
  */
 export const useDocumentEditor = (documentId: number) => {
-  // Document state
+  // ドキュメント状態
   const [document, setDocument] = useState<DocumentWithBlocks | null>(null)
   const [title, setTitle] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Original data for comparison (for auto-save)
+  // 比較用の元データ（自動保存用）
   const [originalTitle, setOriginalTitle] = useState('')
   const [originalBlocks, setOriginalBlocks] = useState<Block[]>([])
 
-  // Initialize block manager
+  // ブロックマネージャーを初期化
   const blockManager = useBlockManager([], documentId)
 
   // blockManagerへの参照を保持して無限ループを回避
@@ -35,7 +35,7 @@ export const useDocumentEditor = (documentId: number) => {
   blockManagerRef.current = blockManager
 
   /**
-   * Handle successful save - update original data
+   * 保存成功を処理 - 元データを更新
    * useCallbackで安定化して無限ループを回避
    */
   const handleSaveSuccess = useCallback((updatedDoc: DocumentWithBlocks) => {

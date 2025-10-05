@@ -21,7 +21,7 @@ import (
 // エラー定義
 var ErrUserExists = errors.New("user already exists")
 
-// createTestConfig creates a config for testing with secure settings disabled
+// createTestConfig は セキュリティ設定を無効にしたテスト用設定を作成します
 func createTestConfig() *config.Config {
 	return &config.Config{
 		Environment:    "development",
@@ -404,7 +404,7 @@ func TestAuthHandler_Me(t *testing.T) {
 	})
 }
 
-// TestCookieSecuritySettings tests cookie security configurations
+// TestCookieSecuritySettings は Cookieセキュリティ設定をテストします
 func TestCookieSecuritySettings(t *testing.T) {
 	mockRepo := NewMockUserRepository()
 	jwtSecret := []byte("test-secret-key")

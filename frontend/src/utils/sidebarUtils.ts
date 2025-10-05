@@ -1,11 +1,11 @@
 import type { Document } from '@/types'
 
 /**
- * Sidebar utilities - Pure functions for document management
+ * サイドバーユーティリティ - ドキュメント管理のための純粋関数
  */
 
 /**
- * Format document date for display
+ * 表示用にドキュメントの日付をフォーマットする
  */
 export const formatDocumentDate = (updatedAt: string): string => {
   if (!updatedAt) return 'No date'
@@ -21,14 +21,14 @@ export const formatDocumentDate = (updatedAt: string): string => {
 }
 
 /**
- * Validate document array response
+ * ドキュメント配列レスポンスを検証する
  */
 export const validateDocumentArray = (data: unknown): Document[] => {
   return Array.isArray(data) ? data : []
 }
 
 /**
- * Create document API request options
+ * ドキュメントAPIリクエストオプションを作成する
  */
 export const createDocumentApiOptions = (
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
@@ -48,7 +48,7 @@ export const createDocumentApiOptions = (
 }
 
 /**
- * Create new document payload
+ * 新しいドキュメントペイロードを作成する
  */
 export const createNewDocumentPayload = () => ({
   title: 'Untitled',
@@ -57,7 +57,7 @@ export const createNewDocumentPayload = () => ({
 })
 
 /**
- * Handle API response safely
+ * APIレスポンスを安全に処理する
  */
 export const handleApiResponse = async <T>(
   response: Response
@@ -79,7 +79,7 @@ export const handleApiResponse = async <T>(
 }
 
 /**
- * Document API endpoints
+ * ドキュメントAPIエンドポイント
  */
 export const DOCUMENT_API = {
   DOCUMENTS: '/api/documents',
@@ -90,7 +90,7 @@ export const DOCUMENT_API = {
 } as const
 
 /**
- * Sidebar UI constants
+ * サイドバーUI定数
  */
 export const SIDEBAR_CONFIG = {
   WIDTH: 'w-64',

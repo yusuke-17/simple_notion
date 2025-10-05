@@ -14,7 +14,7 @@ import (
 	"simple-notion-backend/internal/repository"
 )
 
-// UserRepositoryInterface defines the interface for user repository operations
+// UserRepositoryInterface は ユーザーリポジトリ操作のインターフェースを定義します
 type UserRepositoryInterface interface {
 	GetByEmail(email string) (*models.User, error)
 	GetByID(id int) (*models.User, error)
@@ -36,7 +36,7 @@ func NewAuthHandler(userRepo UserRepositoryInterface, jwtSecret []byte, config *
 	}
 }
 
-// NewAuthHandlerFromRepo creates an AuthHandler with a concrete repository
+// NewAuthHandlerFromRepo は 具象リポジトリを使用してAuthHandlerを作成します
 func NewAuthHandlerFromRepo(userRepo *repository.UserRepository, jwtSecret []byte, config *config.Config) *AuthHandler {
 	return &AuthHandler{
 		userRepo:  userRepo,
@@ -56,7 +56,7 @@ type RegisterRequest struct {
 	Name     string `json:"name"`
 }
 
-// createSecureCookie creates an HTTP cookie with secure settings based on environment
+// createSecureCookie は 環境に基づくセキュアな設定でHTTP Cookieを作成します
 func (h *AuthHandler) createSecureCookie(name, value string, maxAge int) *http.Cookie {
 	sameSiteMode := http.SameSiteLaxMode
 	if h.config.CookieSameSite == "strict" {

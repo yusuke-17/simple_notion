@@ -105,7 +105,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, handler))
 }
 
-// healthCheck performs a simple health check by checking database connectivity
+// healthCheck はデータベース接続を確認するシンプルなヘルスチェックを実行します
 func healthCheck() error {
 	cfg := config.Load()
 
