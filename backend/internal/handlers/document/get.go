@@ -13,7 +13,7 @@ import (
 func (h *DocumentHandler) GetDocumentTree(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserIDFromContext(r.Context())
 
-	tree, err := h.DocRepo.GetDocumentTree(userID)
+	tree, err := h.DocumentService.GetDocumentTree(userID)
 	if err != nil {
 		http.Error(w, "Failed to load documents", http.StatusInternalServerError)
 		return
@@ -32,7 +32,7 @@ func (h *DocumentHandler) GetDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doc, err := h.DocRepo.GetDocumentWithBlocks(docID, userID)
+	doc, err := h.DocumentService.GetDocumentWithBlocks(docID, userID)
 	if err != nil {
 		http.Error(w, "Document not found", http.StatusNotFound)
 		return
@@ -47,7 +47,7 @@ func (h *DocumentHandler) GetDocuments(w http.ResponseWriter, r *http.Request) {
 	deleted := r.URL.Query().Get("deleted") == "true"
 
 	if deleted {
-		docs, err := h.DocRepo.GetTrashedDocuments(userID)
+		docs, err := h.DocumentService.GetTrashedDocuments(userID)
 		if err != nil {
 			http.Error(w, "Failed to load trashed documents", http.StatusInternalServerError)
 			return
@@ -57,7 +57,7 @@ func (h *DocumentHandler) GetDocuments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tree, err := h.DocRepo.GetDocumentTree(userID)
+	tree, err := h.DocumentService.GetDocumentTree(userID)
 	if err != nil {
 		http.Error(w, "Failed to load documents", http.StatusInternalServerError)
 		return

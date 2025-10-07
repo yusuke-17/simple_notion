@@ -19,7 +19,7 @@ func (h *DocumentHandler) DeleteDocument(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.DocRepo.SoftDeleteDocument(docID, userID); err != nil {
+	if err := h.DocumentService.SoftDeleteDocument(docID, userID); err != nil {
 		http.Error(w, "Failed to delete document", http.StatusInternalServerError)
 		return
 	}
@@ -38,7 +38,7 @@ func (h *DocumentHandler) RestoreDocument(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := h.DocRepo.RestoreDocument(docID, userID); err != nil {
+	if err := h.DocumentService.RestoreDocument(docID, userID); err != nil {
 		http.Error(w, "Failed to restore document", http.StatusInternalServerError)
 		return
 	}
@@ -55,7 +55,7 @@ func (h *DocumentHandler) PermanentDeleteDocument(w http.ResponseWriter, r *http
 		return
 	}
 
-	if err := h.DocRepo.PermanentDeleteDocument(docID, userID); err != nil {
+	if err := h.DocumentService.PermanentDeleteDocument(docID, userID); err != nil {
 		http.Error(w, "Failed to permanently delete document", http.StatusInternalServerError)
 		return
 	}

@@ -48,20 +48,14 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// ドキュメント更新（titleとcontentの両方を更新）
-	if err := h.DocRepo.UpdateDocument(docID, userID, req.Title, req.Content); err != nil {
+	// ドキュメントとブロックを統合更新
+	if err := h.DocumentService.UpdateDocumentWithBlocks(docID, userID, req.Title, req.Content, req.Blocks); err != nil {
 		http.Error(w, "Failed to update document", http.StatusInternalServerError)
 		return
 	}
 
-	// ブロック更新
-	if err := h.DocRepo.UpdateBlocks(docID, req.Blocks); err != nil {
-		http.Error(w, "Failed to update blocks", http.StatusInternalServerError)
-		return
-	}
-
 	// 更新されたドキュメントを取得して返す
-	updatedDoc, err := h.DocRepo.GetDocumentWithBlocks(docID, userID)
+	updatedDoc, err := h.DocumentService.GetDocumentWithBlocks(docID, userID)
 	if err != nil {
 		http.Error(w, "Failed to retrieve updated document", http.StatusInternalServerError)
 		return

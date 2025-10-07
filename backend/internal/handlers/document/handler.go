@@ -1,15 +1,15 @@
 package document
 
 import (
-	"simple-notion-backend/internal/repository"
+	"simple-notion-backend/internal/services"
 )
 
 type DocumentHandler struct {
-	DocRepo *repository.DocumentRepository
+	DocumentService *services.DocumentService
 }
 
-func NewDocumentHandler(docRepo *repository.DocumentRepository) *DocumentHandler {
+func NewDocumentHandler(documentService *services.DocumentService) *DocumentHandler {
 	return &DocumentHandler{
-		DocRepo: docRepo,
+		DocumentService: documentService,
 	}
 }

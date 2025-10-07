@@ -16,6 +16,7 @@ import (
 	"simple-notion-backend/internal/handlers/document"
 	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/repository"
+	"simple-notion-backend/internal/services"
 )
 
 func main() {
@@ -48,14 +49,33 @@ func main() {
 		log.Fatal("Failed to create user repository:", err)
 	}
 
-	docRepo, err := repository.NewDocumentRepository(db)
+	// 新しいRepository群を初期化
+	documentCoreRepo, err := repository.NewDocumentCoreRepository(db)
 	if err != nil {
-		log.Fatal("Failed to create document repository:", err)
+		log.Fatal("Failed to create document core repository:", err)
 	}
+
+	blockRepo, err := repository.NewBlockRepository(db)
+	if err != nil {
+		log.Fatal("Failed to create block repository:", err)
+	}
+
+	treeRepo, err := repository.NewDocumentTreeRepository(db)
+	if err != nil {
+		log.Fatal("Failed to create document tree repository:", err)
+	}
+
+	trashRepo, err := repository.NewDocumentTrashRepository(db)
+	if err != nil {
+		log.Fatal("Failed to create document trash repository:", err)
+	}
+
+	// サービス層を初期化
+	documentService := services.NewDocumentService(documentCoreRepo, blockRepo, treeRepo, trashRepo)
 
 	// ハンドラー初期化
 	authHandler := handlers.NewAuthHandler(userRepo, []byte(cfg.JWTSecret), cfg)
-	docHandler := document.NewDocumentHandler(docRepo)
+	docHandler := document.NewDocumentHandler(documentService)
 
 	// ルーター設定
 	r := mux.NewRouter()

@@ -35,7 +35,7 @@ func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request)
 		Content:  req.Content,
 	}
 
-	if err := h.DocRepo.CreateDocument(doc); err != nil {
+	if err := h.DocumentService.CreateDocument(doc); err != nil {
 		http.Error(w, "Failed to create document", http.StatusInternalServerError)
 		return
 	}

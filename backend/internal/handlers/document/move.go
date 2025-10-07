@@ -28,13 +28,13 @@ func (h *DocumentHandler) MoveDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.DocRepo.MoveDocument(docID, req.NewParentID, userID); err != nil {
+	if err := h.DocumentService.MoveDocument(docID, req.NewParentID, userID); err != nil {
 		http.Error(w, "Failed to move document", http.StatusInternalServerError)
 		return
 	}
 
 	// 移動されたドキュメントを取得して返す
-	movedDoc, err := h.DocRepo.GetDocumentWithBlocks(docID, userID)
+	movedDoc, err := h.DocumentService.GetDocumentWithBlocks(docID, userID)
 	if err != nil {
 		http.Error(w, "Failed to retrieve moved document", http.StatusInternalServerError)
 		return
