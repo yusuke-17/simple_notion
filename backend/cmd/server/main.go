@@ -7,14 +7,12 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
-	"github.com/rs/cors"
 
+	"simple-notion-backend/internal/app"
 	"simple-notion-backend/internal/config"
 	"simple-notion-backend/internal/handlers"
 	"simple-notion-backend/internal/handlers/document"
-	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/repository"
 	"simple-notion-backend/internal/services"
 )
@@ -78,48 +76,10 @@ func main() {
 	docHandler := document.NewDocumentHandler(documentService)
 
 	// ルーター設定
-	r := mux.NewRouter()
+	router := app.NewRouter(authHandler, docHandler, []byte(cfg.JWTSecret))
+	router.SetupRoutes()
 
-	// ヘルスチェックエンドポイント
-	r.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
-	}).Methods("GET")
-
-	// 認証不要エンドポイント
-	r.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")
-	r.HandleFunc("/api/auth/register", authHandler.Register).Methods("POST")
-	r.HandleFunc("/api/auth/logout", authHandler.Logout).Methods("POST")
-
-	// 認証必要エンドポイント
-	api := r.PathPrefix("/api").Subrouter()
-	api.Use(middleware.AuthMiddleware([]byte(cfg.JWTSecret)))
-
-	api.HandleFunc("/auth/me", authHandler.Me).Methods("GET")
-	api.HandleFunc("/documents", docHandler.GetDocuments).Methods("GET")
-	api.HandleFunc("/documents", docHandler.CreateDocument).Methods("POST")
-	api.HandleFunc("/documents/tree", docHandler.GetDocumentTree).Methods("GET")
-	api.HandleFunc("/documents/{id:[0-9]+}", docHandler.GetDocument).Methods("GET")
-	api.HandleFunc("/documents/{id:[0-9]+}", docHandler.UpdateDocument).Methods("PUT")
-	api.HandleFunc("/documents/{id:[0-9]+}", docHandler.DeleteDocument).Methods("DELETE")
-	api.HandleFunc("/documents/{id:[0-9]+}/restore", docHandler.RestoreDocument).Methods("PUT")
-	api.HandleFunc("/documents/{id:[0-9]+}/permanent", docHandler.PermanentDeleteDocument).Methods("DELETE")
-	api.HandleFunc("/documents/{id:[0-9]+}/move", docHandler.MoveDocument).Methods("PUT")
-
-	// CORS設定
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{
-			"http://localhost:5173", // Vite開発サーバー
-			"http://localhost:3000", // 本番フロントエンド
-			"http://frontend:8080",  // Dockerコンテナ間通信
-		},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"*"},
-		AllowCredentials: true,
-	})
-
-	handler := c.Handler(r)
+	handler := router.GetHandler(cfg)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, handler))
