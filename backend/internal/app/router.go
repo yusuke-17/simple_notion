@@ -34,6 +34,16 @@ func NewRouter(
 	}
 }
 
+// NewRouterFromDependencies は、Dependenciesから新しいRouterインスタンスを作成します
+func NewRouterFromDependencies(deps *Dependencies) *Router {
+	return &Router{
+		router:      mux.NewRouter(),
+		authHandler: deps.AuthHandler,
+		docHandler:  deps.DocumentHandler,
+		jwtSecret:   deps.GetJWTSecret(),
+	}
+}
+
 // SetupRoutes は、全てのエンドポイントを設定します
 func (r *Router) SetupRoutes() {
 	// ヘルスチェックエンドポイント
