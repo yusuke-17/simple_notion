@@ -41,6 +41,8 @@ services:
     security_opt:
       - no-new-privileges:true
     read_only: true
+    volumes:
+      - uploads_data:/uploads  # Image uploads directory
     tmpfs:
       - /tmp
     restart: unless-stopped
@@ -86,3 +88,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:  # Persistent storage for uploaded images

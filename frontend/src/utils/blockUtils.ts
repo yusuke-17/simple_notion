@@ -1,4 +1,4 @@
-import type { Block } from '@/types'
+import type { Block, ImageBlockContent } from '@/types'
 
 /**
  * Block operation utilities - Pure functions for block manipulation
@@ -169,6 +169,8 @@ export const getBlockPlaceholder = (
       return 'Quote'
     case 'code':
       return 'Code'
+    case 'image':
+      return 'Click to upload image or drag & drop'
     default:
       return position === 0 ? 'Type to start writing...' : 'Type / for commands'
   }
@@ -192,6 +194,8 @@ export const getBlockClassName = (blockType: string): string => {
       return `${baseClass} italic border-l-4 border-gray-300 pl-4`
     case 'code':
       return `${baseClass} font-mono bg-gray-100 rounded p-2`
+    case 'image':
+      return 'w-full' // 画像ブロックは特別な処理が必要
     default:
       return `${baseClass} text-base`
   }
@@ -224,6 +228,114 @@ export const BLOCK_TYPES = {
   NUMBERED: 'numbered',
   QUOTE: 'quote',
   CODE: 'code',
+  IMAGE: 'image',
 } as const
 
 export type BlockType = (typeof BLOCK_TYPES)[keyof typeof BLOCK_TYPES]
+
+/**
+ * Image block specific utility functions
+ */
+
+/**
+ * Validate file type for image upload
+ */
+export const isValidImageFile = (file: File): boolean => {
+  const validTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+  ]
+  return validTypes.includes(file.type)
+}
+
+/**
+ * Validate file size for image upload (max 5MB)
+ */
+export const isValidImageSize = (
+  file: File,
+  maxSizeInMB: number = 5
+): boolean => {
+  const maxSizeInBytes = maxSizeInMB * 1024 * 1024
+  return file.size <= maxSizeInBytes
+}
+
+/**
+ * Format file size for display
+ */
+export const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+/**
+ * Generate image alt text from filename
+ */
+export const generateImageAlt = (filename: string): string => {
+  // Remove file extension and replace underscores/hyphens with spaces
+  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '')
+  return nameWithoutExt.replace(/[_-]/g, ' ')
+}
+
+/**
+ * Create image URL from filename
+ */
+export const createImageUrl = (filename: string): string => {
+  return `/api/uploads/${filename}`
+}
+
+/**
+ * Extract filename from image URL
+ */
+export const extractFilenameFromUrl = (url: string): string => {
+  return url.split('/').pop() || ''
+}
+
+/**
+ * Calculate aspect ratio for image display
+ */
+export const calculateAspectRatio = (width: number, height: number): number => {
+  return width / height
+}
+
+/**
+ * Get responsive image dimensions
+ */
+export const getResponsiveImageDimensions = (
+  originalWidth: number,
+  originalHeight: number,
+  maxWidth: number = 640
+): { width: number; height: number } => {
+  if (originalWidth <= maxWidth) {
+    return { width: originalWidth, height: originalHeight }
+  }
+
+  const aspectRatio = calculateAspectRatio(originalWidth, originalHeight)
+  return {
+    width: maxWidth,
+    height: Math.round(maxWidth / aspectRatio),
+  }
+}
+
+/**
+ * Check if image block has valid content
+ */
+export const isImageBlockComplete = (
+  content: unknown
+): content is ImageBlockContent => {
+  return !!(
+    content &&
+    typeof content === 'object' &&
+    content !== null &&
+    'src' in content &&
+    typeof content.src === 'string' &&
+    content.src.trim() !== ''
+  )
+}

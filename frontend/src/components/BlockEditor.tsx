@@ -2,8 +2,9 @@ import { memo } from 'react'
 import { Input } from '@/components/ui/input'
 import { Trash2, GripVertical, Plus } from 'lucide-react'
 import { RichTextEditor } from '@/components/RichTextEditor'
+import { ImageBlockEditor } from '@/components/ImageBlockEditor'
 import { useBlockEditor } from '@/hooks/useBlockEditor'
-import type { Block } from '@/types'
+import type { Block, ImageBlockContent } from '@/types'
 import { BLOCK_TYPES } from '@/utils/blockUtils'
 
 interface BlockEditorProps {
@@ -27,6 +28,7 @@ const BLOCK_TYPE_LABELS = {
   [BLOCK_TYPES.NUMBERED]: 'Numbered List',
   [BLOCK_TYPES.QUOTE]: 'Quote',
   [BLOCK_TYPES.CODE]: 'Code',
+  [BLOCK_TYPES.IMAGE]: 'Image',
 }
 
 /**
@@ -72,6 +74,30 @@ export function BlockEditor({
     onMoveDown,
     () => onFocus(block.id)
   )
+
+  // 画像ブロック用のコンテンツ更新処理
+  const handleImageContentChange = (imageContent: ImageBlockContent) => {
+    handleContentChange(JSON.stringify(imageContent))
+  }
+
+  // 画像ブロックのコンテンツを取得
+  const getImageContent = (): ImageBlockContent | undefined => {
+    if (block.type !== BLOCK_TYPES.IMAGE) return undefined
+
+    try {
+      return JSON.parse(block.content) as ImageBlockContent
+    } catch {
+      return {
+        src: '',
+        alt: '',
+        caption: '',
+        width: 0,
+        height: 0,
+        originalName: '',
+        fileSize: 0,
+      }
+    }
+  }
 
   const prefixText = getPrefixText()
 
@@ -146,6 +172,15 @@ export function BlockEditor({
                 onUpdate={handleContentChange}
                 onFocus={handleFocus}
                 onKeyDown={handleRichTextKeyDown}
+                className="min-h-[2rem] w-full"
+              />
+            </div>
+          ) : block.type === BLOCK_TYPES.IMAGE ? (
+            <div className="w-full" onClick={() => onFocus(block.id)}>
+              <ImageBlockEditor
+                initialContent={getImageContent()}
+                onContentChange={handleImageContentChange}
+                placeholder={placeholder}
                 className="min-h-[2rem] w-full"
               />
             </div>

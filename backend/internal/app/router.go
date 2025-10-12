@@ -106,6 +106,9 @@ func (r *Router) setupPublicRoutes() {
 	r.router.HandleFunc("/api/auth/login", r.authHandler.Login).Methods("POST")
 	r.router.HandleFunc("/api/auth/register", r.authHandler.Register).Methods("POST")
 	r.router.HandleFunc("/api/auth/logout", r.authHandler.Logout).Methods("POST")
+
+	// 静的ファイル配信（画像等）
+	r.router.HandleFunc("/api/uploads/{filename}", handlers.ServeUploadsHandler).Methods("GET")
 }
 
 // setupProtectedRoutes は、認証必要エンドポイントを設定します
@@ -116,6 +119,9 @@ func (r *Router) setupProtectedRoutes() {
 
 	// 認証関連
 	api.HandleFunc("/auth/me", r.authHandler.Me).Methods("GET")
+
+	// ファイルアップロード関連
+	api.HandleFunc("/upload/image", handlers.UploadImageHandler).Methods("POST", "OPTIONS")
 
 	// ドキュメント関連
 	api.HandleFunc("/documents", r.docHandler.GetDocuments).Methods("GET")
