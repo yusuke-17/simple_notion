@@ -5,8 +5,12 @@ import {
   Italic,
   Underline as UnderlineIcon,
   Strikethrough,
+  Type,
+  Palette,
 } from 'lucide-react'
 import { useRichTextEditor } from '@/hooks/useRichTextEditor'
+import { ColorPalette, ColorPaletteTrigger } from '@/components/ui/ColorPalette'
+import { useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 
 interface RichTextEditorProps {
@@ -31,6 +35,12 @@ export function RichTextEditor({
   onFocus,
   onKeyDown,
 }: RichTextEditorProps) {
+  // カラーパレットの表示状態管理
+  const [showColorPalette, setShowColorPalette] = useState(false)
+  const [colorPaletteType, setColorPaletteType] = useState<
+    'text' | 'highlight'
+  >('text')
+
   // フックが全てのリッチテキストエディターロジックをカプセル化
   const {
     editor,
@@ -44,6 +54,10 @@ export function RichTextEditor({
     toggleUnderline,
     toggleStrike,
     isFormatActive,
+    setTextColor,
+    setHighlightColor,
+    getTextColor,
+    getHighlightColor,
   } = useRichTextEditor({
     content,
     placeholder,
@@ -51,6 +65,27 @@ export function RichTextEditor({
     onFocus,
     onKeyDown,
   })
+
+  // カラーパレットの表示切り替え
+  const handleColorPaletteToggle = (type: 'text' | 'highlight') => {
+    setColorPaletteType(type)
+    setShowColorPalette(!showColorPalette)
+  }
+
+  // 色の選択処理
+  const handleColorSelect = (color: string) => {
+    if (colorPaletteType === 'text') {
+      setTextColor(color)
+    } else {
+      setHighlightColor(color)
+    }
+    setShowColorPalette(false)
+  }
+
+  // カラーパレットを閉じる処理
+  const handleClosePalette = () => {
+    setShowColorPalette(false)
+  }
 
   return (
     <div className="relative">
@@ -102,6 +137,45 @@ export function RichTextEditor({
             >
               <Strikethrough className="h-3 w-3" />
             </Button>
+
+            {/* 区切り線 */}
+            <div className="w-px bg-gray-200 mx-1" />
+
+            {/* カラーボタン */}
+            <ColorPaletteTrigger
+              type="text"
+              currentColor={getTextColor()}
+              isActive={showColorPalette && colorPaletteType === 'text'}
+              onClick={() => handleColorPaletteToggle('text')}
+            />
+            <ColorPaletteTrigger
+              type="highlight"
+              currentColor={getHighlightColor()}
+              isActive={showColorPalette && colorPaletteType === 'highlight'}
+              onClick={() => handleColorPaletteToggle('highlight')}
+            />
+          </div>
+        )}
+
+        {/* カラーパレット */}
+        {showColorPalette && (
+          <div
+            className="absolute z-20"
+            style={{
+              top: `${toolbarPosition.top + 40}px`, // ツールバーの下に表示
+              left: `${toolbarPosition.left}px`,
+            }}
+          >
+            <ColorPalette
+              type={colorPaletteType}
+              currentColor={
+                colorPaletteType === 'text'
+                  ? getTextColor()
+                  : getHighlightColor()
+              }
+              onColorSelect={handleColorSelect}
+              onClose={handleClosePalette}
+            />
           </div>
         )}
 
@@ -150,6 +224,41 @@ export function RichTextEditor({
               >
                 <Strikethrough className="h-3 w-3 mr-2" />
                 Strike
+              </Button>
+
+              {/* 区切り線 */}
+              <div className="h-px bg-gray-200 my-1" />
+
+              {/* カラーオプション */}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleColorPaletteToggle('text')}
+                className="justify-start h-7 px-2"
+              >
+                <Type className="h-3 w-3 mr-2" />
+                テキスト色
+                {getTextColor() && (
+                  <div
+                    className="ml-2 w-2 h-2 rounded-sm border border-gray-300"
+                    style={{ backgroundColor: getTextColor() }}
+                  />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleColorPaletteToggle('highlight')}
+                className="justify-start h-7 px-2"
+              >
+                <Palette className="h-3 w-3 mr-2" />
+                背景色
+                {getHighlightColor() && (
+                  <div
+                    className="ml-2 w-2 h-2 rounded-sm border border-gray-300"
+                    style={{ backgroundColor: getHighlightColor() }}
+                  />
+                )}
               </Button>
             </div>
           </div>

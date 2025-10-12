@@ -11,6 +11,9 @@ import { HardBreak } from '@tiptap/extension-hard-break'
 import { Dropcursor } from '@tiptap/extension-dropcursor'
 import { Gapcursor } from '@tiptap/extension-gapcursor'
 import Underline from '@tiptap/extension-underline'
+import { Color } from '@tiptap/extension-color'
+import { Highlight } from '@tiptap/extension-highlight'
+import { TextStyle } from '@tiptap/extension-text-style'
 import {
   normalizeContent,
   getSelectionCoordinates,
@@ -123,6 +126,16 @@ export const useRichTextEditor = ({
         },
       }),
       Text,
+      // テキストスタイル拡張（カラーの前提条件）
+      TextStyle,
+      // テキスト色
+      Color.configure({
+        types: ['textStyle'],
+      }),
+      // 背景色（ハイライト）
+      Highlight.configure({
+        multicolor: true,
+      }),
       BoldExt,
       ItalicExt,
       Strike,
@@ -306,6 +319,41 @@ export const useRichTextEditor = ({
   }, [editor])
 
   /**
+   * カラー機能
+   */
+  const setTextColor = useCallback(
+    (color: string) => {
+      if (color === '') {
+        editor?.chain().focus().unsetColor().run()
+      } else {
+        editor?.chain().focus().setColor(color).run()
+      }
+      setShowContextMenu(false)
+    },
+    [editor]
+  )
+
+  const setHighlightColor = useCallback(
+    (color: string) => {
+      if (color === '') {
+        editor?.chain().focus().unsetHighlight().run()
+      } else {
+        editor?.chain().focus().setHighlight({ color }).run()
+      }
+      setShowContextMenu(false)
+    },
+    [editor]
+  )
+
+  const getTextColor = useCallback(() => {
+    return editor?.getAttributes('textStyle').color || ''
+  }, [editor])
+
+  const getHighlightColor = useCallback(() => {
+    return editor?.getAttributes('highlight').color || ''
+  }, [editor])
+
+  /**
    * Check if formatting is active
    */
   const isFormatActive = useCallback(
@@ -333,6 +381,12 @@ export const useRichTextEditor = ({
     toggleUnderline,
     toggleStrike,
     isFormatActive,
+
+    // Color actions
+    setTextColor,
+    setHighlightColor,
+    getTextColor,
+    getHighlightColor,
 
     // Computed values
     placeholder,

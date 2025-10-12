@@ -98,6 +98,55 @@ vi.mock('lucide-react', () => ({
   Strikethrough: (props: { className?: string }) => (
     <span data-testid="strikethrough-icon" {...props} />
   ),
+  Palette: (props: { className?: string }) => (
+    <span data-testid="palette-icon" {...props} />
+  ),
+  Type: (props: { className?: string }) => (
+    <span data-testid="type-icon" {...props} />
+  ),
+}))
+
+// Mock ColorPalette components
+vi.mock('@/components/ui/ColorPalette', () => ({
+  ColorPalette: ({
+    onColorSelect,
+    onClose,
+  }: {
+    onColorSelect: (color: string) => void
+    onClose: () => void
+  }) => (
+    <div data-testid="color-palette">
+      <button
+        data-testid="color-option-red"
+        onClick={() => onColorSelect('#DC2626')}
+      >
+        Red
+      </button>
+      <button data-testid="close-palette" onClick={onClose}>
+        Close
+      </button>
+    </div>
+  ),
+  ColorPaletteTrigger: ({
+    type,
+    onClick,
+    isActive,
+    currentColor,
+  }: {
+    type: 'text' | 'highlight'
+    onClick: () => void
+    isActive?: boolean
+    currentColor?: string
+  }) => (
+    <button
+      data-testid={`color-trigger-${type}`}
+      onClick={onClick}
+      data-active={isActive}
+      data-current-color={currentColor}
+    >
+      {type === 'text' ? 'Text Color' : 'Highlight Color'}
+    </button>
+  ),
 }))
 
 describe('RichTextEditor', () => {
@@ -117,6 +166,11 @@ describe('RichTextEditor', () => {
     toggleUnderline: vi.fn(),
     toggleStrike: vi.fn(),
     isFormatActive: vi.fn(() => false),
+    // カラー機能のモック
+    setTextColor: vi.fn(),
+    setHighlightColor: vi.fn(),
+    getTextColor: vi.fn(() => ''),
+    getHighlightColor: vi.fn(() => ''),
   }
 
   beforeEach(() => {
