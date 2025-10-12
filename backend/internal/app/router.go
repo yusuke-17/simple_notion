@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -18,6 +19,7 @@ type Router struct {
 	authHandler *handlers.AuthHandler
 	docHandler  *document.DocumentHandler
 	jwtSecret   []byte
+	metrics     *Metrics
 }
 
 // NewRouter は、新しいRouterインスタンスを作成します
@@ -44,10 +46,24 @@ func NewRouterFromDependencies(deps *Dependencies) *Router {
 	}
 }
 
+// NewRouterWithMetrics は、DependenciesとMetricsから新しいRouterインスタンスを作成します
+func NewRouterWithMetrics(deps *Dependencies, metrics *Metrics) *Router {
+	return &Router{
+		router:      mux.NewRouter(),
+		authHandler: deps.AuthHandler,
+		docHandler:  deps.DocumentHandler,
+		jwtSecret:   deps.GetJWTSecret(),
+		metrics:     metrics,
+	}
+}
+
 // SetupRoutes は、全てのエンドポイントを設定します
 func (r *Router) SetupRoutes() {
 	// ヘルスチェックエンドポイント
 	r.setupHealthCheck()
+
+	// メトリクスエンドポイント
+	r.setupMetricsEndpoints()
 
 	// 認証不要エンドポイント
 	r.setupPublicRoutes()
@@ -62,6 +78,26 @@ func (r *Router) setupHealthCheck() {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
+	}).Methods("GET")
+}
+
+// setupMetricsEndpoints は、メトリクスエンドポイントを設定します
+func (r *Router) setupMetricsEndpoints() {
+	if r.metrics == nil {
+		return
+	}
+
+	r.router.HandleFunc("/metrics", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		snapshot := r.metrics.GetSnapshot()
+		if data, err := json.Marshal(snapshot); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"failed to marshal metrics"}`))
+		} else {
+			w.WriteHeader(http.StatusOK)
+			w.Write(data)
+		}
 	}).Methods("GET")
 }
 

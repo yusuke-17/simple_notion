@@ -4,12 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
 	_ "github.com/lib/pq"
 
@@ -22,18 +17,33 @@ type Application struct {
 	database     *sql.DB
 	dependencies *Dependencies
 	server       *Server
-	logger       *log.Logger
+	logger       *Logger
+	metrics      *Metrics
+	lifecycle    *LifecycleManager
 }
 
 // New は、新しいApplicationインスタンスを作成します
 func New() (*Application, error) {
-	app := &Application{
-		logger: log.New(os.Stdout, "[APP] ", log.LstdFlags|log.Lshortfile),
-	}
+	app := &Application{}
 
 	// 設定の読み込み
 	if err := app.loadConfig(); err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// メトリクスの初期化
+	if err := app.initializeMetrics(); err != nil {
+		return nil, fmt.Errorf("failed to initialize metrics: %w", err)
+	}
+
+	// ログの初期化
+	if err := app.initializeLogger(); err != nil {
+		return nil, fmt.Errorf("failed to initialize logger: %w", err)
+	}
+
+	// ライフサイクル管理の初期化
+	if err := app.initializeLifecycle(); err != nil {
+		return nil, fmt.Errorf("failed to initialize lifecycle: %w", err)
 	}
 
 	// データベース接続
@@ -57,7 +67,46 @@ func New() (*Application, error) {
 // loadConfig は、設定を読み込みます
 func (a *Application) loadConfig() error {
 	a.config = config.Load()
-	a.logger.Printf("Configuration loaded for environment: %s", a.config.Environment)
+	return nil
+}
+
+// initializeMetrics は、メトリクスを初期化します
+func (a *Application) initializeMetrics() error {
+	a.metrics = NewMetrics(a.config)
+	return nil
+}
+
+// initializeLogger は、ログを初期化します
+func (a *Application) initializeLogger() error {
+	a.logger = NewLogger("APP", a.config, a.metrics)
+	a.logger.Info("Application logger initialized", map[string]interface{}{
+		"environment": a.config.Environment,
+	})
+	return nil
+}
+
+// initializeLifecycle は、ライフサイクル管理を初期化します
+func (a *Application) initializeLifecycle() error {
+	a.lifecycle = NewLifecycleManager(a.logger)
+
+	// データベース接続のシャットダウンフックを追加
+	a.lifecycle.AddShutdownHook(func(ctx context.Context) error {
+		a.logger.Info("Closing database connection")
+		if a.database != nil {
+			return a.database.Close()
+		}
+		return nil
+	})
+
+	// サーバーのシャットダウンフックを追加
+	a.lifecycle.AddShutdownHook(func(ctx context.Context) error {
+		a.logger.Info("Shutting down HTTP server")
+		if a.server != nil {
+			return a.server.Shutdown(ctx)
+		}
+		return nil
+	})
+
 	return nil
 }
 
@@ -75,7 +124,12 @@ func (a *Application) connectDatabase() error {
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	a.logger.Println("Database connection established")
+	// メトリクス更新
+	a.metrics.SetDatabaseConnections(1)
+
+	a.logger.Info("Database connection established", map[string]interface{}{
+		"database_url": a.config.DatabaseURL,
+	})
 	return nil
 }
 
@@ -87,84 +141,50 @@ func (a *Application) initializeDependencies() error {
 		return fmt.Errorf("failed to create dependencies: %w", err)
 	}
 
-	a.logger.Println("Dependencies initialized")
+	a.logger.Info("Dependencies initialized")
 	return nil
 }
 
 // initializeServer は、HTTPサーバーを初期化します
 func (a *Application) initializeServer() error {
 	var err error
-	a.server, err = NewServer(a.config, a.dependencies)
+	a.server, err = NewServer(a.config, a.dependencies, a.metrics, a.logger)
 	if err != nil {
 		return fmt.Errorf("failed to create server: %w", err)
 	}
 
-	a.logger.Printf("HTTP server initialized on port %s", a.config.Port)
+	a.logger.Info("HTTP server initialized", map[string]interface{}{
+		"port": a.config.Port,
+	})
 	return nil
 }
 
 // Run は、アプリケーションを起動し、グレースフルシャットダウンを待機します
 func (a *Application) Run() error {
-	// シグナルチャネルの設定
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	// ライフサイクル管理を開始
+	a.lifecycle.Start()
 
 	// サーバーをバックグラウンドで起動
 	serverErr := make(chan error, 1)
 	go func() {
-		a.logger.Printf("Starting server on port %s", a.config.Port)
-		if err := a.server.Start(); err != nil && err != http.ErrServerClosed {
+		a.logger.Info("Starting HTTP server", map[string]interface{}{
+			"port": a.config.Port,
+		})
+		if err := a.server.Start(); err != nil {
 			serverErr <- fmt.Errorf("server startup failed: %w", err)
 		}
 	}()
 
-	// シグナルまたはエラーを待機
+	// サーバー起動エラーまたはライフサイクル終了を待機
 	select {
 	case err := <-serverErr:
-		a.logger.Printf("Server error: %v", err)
+		a.logger.Error("Server startup failed", err)
 		return err
-	case sig := <-quit:
-		a.logger.Printf("Received signal: %v. Starting graceful shutdown...", sig)
-		return a.Shutdown()
+	default:
+		// ライフサイクル管理にシャットダウンを委任
+		a.lifecycle.Wait()
+		return nil
 	}
-}
-
-// Shutdown は、アプリケーションをグレースフルにシャットダウンします
-func (a *Application) Shutdown() error {
-	a.logger.Println("Starting graceful shutdown")
-
-	// シャットダウンのタイムアウト設定（30秒）
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	// HTTPサーバーの停止
-	if a.server != nil {
-		a.logger.Println("Shutting down HTTP server...")
-		if err := a.server.Shutdown(ctx); err != nil {
-			a.logger.Printf("HTTP server shutdown error: %v", err)
-			return fmt.Errorf("failed to shutdown HTTP server: %w", err)
-		}
-		a.logger.Println("HTTP server stopped")
-	}
-
-	// 依存関係のクリーンアップ
-	if a.dependencies != nil {
-		a.logger.Println("Cleaning up dependencies...")
-		if err := a.dependencies.Close(); err != nil {
-			a.logger.Printf("Dependencies cleanup error: %v", err)
-		}
-	}
-
-	// データベース接続の閉鎖
-	if a.database != nil {
-		a.logger.Println("Closing database connection...")
-		if err := a.database.Close(); err != nil {
-			a.logger.Printf("Database close error: %v", err)
-		}
-	}
-
-	a.logger.Println("Graceful shutdown completed")
-	return nil
 }
 
 // HealthCheck は、アプリケーションのヘルスチェックを実行します
@@ -172,6 +192,13 @@ func (a *Application) HealthCheck() error {
 	// データベース接続の確認
 	if err := a.database.Ping(); err != nil {
 		return fmt.Errorf("database health check failed: %w", err)
+	}
+
+	// メトリクスによる健全性チェック
+	if a.metrics != nil {
+		if healthy, issues := a.metrics.IsHealthy(); !healthy {
+			return fmt.Errorf("health check failed: %v", issues)
+		}
 	}
 
 	return nil

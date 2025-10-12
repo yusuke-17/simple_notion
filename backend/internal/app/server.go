@@ -3,9 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"simple-notion-backend/internal/config"
@@ -17,15 +15,17 @@ type Server struct {
 	router       *Router
 	config       *config.Config
 	dependencies *Dependencies
-	logger       *log.Logger
+	metrics      *Metrics
+	logger       *Logger
 }
 
 // NewServer は、新しいServerインスタンスを作成します
-func NewServer(cfg *config.Config, deps *Dependencies) (*Server, error) {
+func NewServer(cfg *config.Config, deps *Dependencies, metrics *Metrics, logger *Logger) (*Server, error) {
 	server := &Server{
 		config:       cfg,
 		dependencies: deps,
-		logger:       log.New(os.Stdout, "[SERVER] ", log.LstdFlags|log.Lshortfile),
+		metrics:      metrics,
+		logger:       NewLogger("SERVER", cfg, metrics),
 	}
 
 	// ルーターの設定
@@ -43,20 +43,18 @@ func NewServer(cfg *config.Config, deps *Dependencies) (*Server, error) {
 
 // setupRouter は、ルーターを設定します
 func (s *Server) setupRouter() error {
-	s.router = NewRouterFromDependencies(s.dependencies)
+	s.router = NewRouterWithMetrics(s.dependencies, s.metrics)
 	s.router.SetupRoutes()
 
-	s.logger.Println("Router configured with all endpoints")
+	s.logger.Info("Router configured with all endpoints")
 	return nil
-}
-
-// setupHTTPServer は、HTTPサーバーを設定します
+} // setupHTTPServer は、HTTPサーバーを設定します
 func (s *Server) setupHTTPServer() error {
 	handler := s.router.GetHandler(s.config)
 
 	s.httpServer = &http.Server{
 		Addr:    ":" + s.config.Port,
-		Handler: handler,
+		Handler: s.metrics.HTTPMiddleware(handler),
 
 		// タイムアウト設定
 		ReadTimeout:       15 * time.Second,
@@ -65,16 +63,20 @@ func (s *Server) setupHTTPServer() error {
 		ReadHeaderTimeout: 5 * time.Second,
 
 		// ログ設定
-		ErrorLog: s.logger,
+		ErrorLog: s.logger.GetStandardLogger(),
 	}
 
-	s.logger.Printf("HTTP server configured on port %s", s.config.Port)
+	s.logger.Info("HTTP server configured", map[string]interface{}{
+		"port": s.config.Port,
+	})
 	return nil
 }
 
 // Start は、HTTPサーバーを起動します
 func (s *Server) Start() error {
-	s.logger.Printf("Starting HTTP server on :%s", s.config.Port)
+	s.logger.Info("Starting HTTP server", map[string]interface{}{
+		"port": s.config.Port,
+	})
 
 	if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("HTTP server startup failed: %w", err)
@@ -85,17 +87,15 @@ func (s *Server) Start() error {
 
 // Shutdown は、HTTPサーバーをグレースフルにシャットダウンします
 func (s *Server) Shutdown(ctx context.Context) error {
-	s.logger.Println("Shutting down HTTP server...")
+	s.logger.Info("Shutting down HTTP server")
 
 	if err := s.httpServer.Shutdown(ctx); err != nil {
 		return fmt.Errorf("HTTP server shutdown failed: %w", err)
 	}
 
-	s.logger.Println("HTTP server shutdown completed")
+	s.logger.Info("HTTP server shutdown completed")
 	return nil
-}
-
-// GetAddr は、サーバーのアドレスを返します
+} // GetAddr は、サーバーのアドレスを返します
 func (s *Server) GetAddr() string {
 	if s.httpServer != nil {
 		return s.httpServer.Addr
