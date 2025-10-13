@@ -4,7 +4,7 @@ import { Login } from '@/components/Login'
 import { Sidebar } from '@/components/Sidebar'
 import { DocumentEditor } from '@/components/DocumentEditor'
 import { Button } from '@/components/ui/button'
-import { Menu, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import type { Document } from '@/types'
 
 function App() {
@@ -117,24 +117,29 @@ function App() {
         onDocumentSelect={setCurrentDocumentId}
         onDocumentDelete={handleDocumentDelete}
         showingSidebar={showingSidebar}
-        onToggleSidebar={() => setShowingSidebar(!showingSidebar)}
       />
+
+      {/* サイドバーとメインエリアの境界線上の開閉ボタン */}
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowingSidebar(!showingSidebar)}
+          className="absolute top-4 -translate-x-1/2 left-0 z-10 h-8 w-8 bg-white border border-gray-200 hover:bg-gray-50"
+          aria-label="サイドバートグル"
+        >
+          {showingSidebar ? (
+            <ChevronLeft className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
 
       {/* Main Editor Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="h-12 border-b border-gray-200 flex items-center px-4">
-          {!showingSidebar && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowingSidebar(true)}
-              className="mr-2"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          )}
-
           <div className="flex-1"></div>
 
           <Button

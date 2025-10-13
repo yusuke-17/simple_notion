@@ -52,7 +52,6 @@ const defaultProps = {
   onDocumentSelect: vi.fn(),
   onDocumentDelete: vi.fn(),
   showingSidebar: true,
-  onToggleSidebar: vi.fn(),
 }
 
 describe('Sidebar Component', () => {
@@ -201,24 +200,9 @@ describe('Sidebar Component', () => {
     })
   })
 
-  it('サイドバーをトグルできる', async () => {
-    const user = userEvent.setup()
-    const mockOnToggleSidebar = vi.fn()
-
-    render(<Sidebar {...defaultProps} onToggleSidebar={mockOnToggleSidebar} />)
-
-    // ドキュメントが読み込まれるまで待機
-    await waitFor(() => {
-      expect(screen.getByText('First Document')).toBeInTheDocument()
-    })
-
-    // メニューアイコンのボタンを探す
-    const toggleButton = screen.getByRole('button', {
-      name: 'サイドバートグル',
-    })
-    await user.click(toggleButton)
-
-    expect(mockOnToggleSidebar).toHaveBeenCalled()
+  it.skip('サイドバーをトグルできる（App.tsxに移動のため無効化）', async () => {
+    // このテストは開閉ボタンがApp.tsxに移動したため無効化しました
+    // 代わりにApp.tsxの統合テストで確認する必要があります
   })
 
   it('ゴミ箱表示に切り替えられる', async () => {

@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Menu, Plus, Trash2, X } from 'lucide-react'
+import { Plus, Trash2, X } from 'lucide-react'
 import { useSidebar } from '@/hooks/useSidebar'
 
 interface SidebarProps {
@@ -7,7 +7,6 @@ interface SidebarProps {
   onDocumentSelect: (documentId: number) => void
   onDocumentDelete: (documentId: number) => void
   showingSidebar: boolean
-  onToggleSidebar: () => void
 }
 
 /**
@@ -20,7 +19,6 @@ export function Sidebar({
   onDocumentSelect,
   onDocumentDelete,
   showingSidebar,
-  onToggleSidebar,
 }: SidebarProps) {
   // Hook encapsulates all sidebar logic
   const {
@@ -46,17 +44,7 @@ export function Sidebar({
       } bg-gray-50 border-r border-gray-200 flex flex-col transition-all duration-200 h-full`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onToggleSidebar}
-          className="h-8 w-8 p-0"
-          aria-label="サイドバートグル"
-        >
-          <Menu className="h-4 w-4" />
-        </Button>
-
+      <div className="flex items-center justify-end p-4 border-b border-gray-200">
         {showingSidebar && (
           <div className="flex items-center space-x-2">
             <Button
