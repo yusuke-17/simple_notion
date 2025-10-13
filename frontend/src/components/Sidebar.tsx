@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, X } from 'lucide-react'
+import { Plus, Trash2, X, FileText } from 'lucide-react'
 import { useSidebar } from '@/hooks/useSidebar'
 
 interface SidebarProps {
@@ -44,7 +44,7 @@ export function Sidebar({
       } bg-gray-50 border-r border-gray-200 flex flex-col transition-all duration-200 h-full`}
     >
       {/* Header */}
-      <div className="flex items-center justify-end p-4 border-b border-gray-200">
+      <div className="flex items-center justify-start p-4 border-b border-gray-200">
         {showingSidebar && (
           <div className="flex items-center space-x-2">
             <Button
@@ -65,7 +65,11 @@ export function Sidebar({
               title={showingTrash ? 'ドキュメント一覧' : 'ゴミ箱'}
               aria-label={showingTrash ? 'ドキュメント一覧' : 'ゴミ箱'}
             >
-              <Trash2 className="h-4 w-4" />
+              {showingTrash ? (
+                <FileText className="h-4 w-4" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
             </Button>
           </div>
         )}
