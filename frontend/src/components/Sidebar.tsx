@@ -4,7 +4,7 @@ import { useSidebar } from '@/hooks/useSidebar'
 
 interface SidebarProps {
   currentDocumentId: number | null
-  onDocumentSelect: (documentId: number) => void
+  onDocumentSelect: (documentId: number, isReadOnly?: boolean) => void
   onDocumentDelete: (documentId: number) => void
   showingSidebar: boolean
 }
@@ -32,6 +32,7 @@ export function Sidebar({
     permanentDelete,
     toggleTrash,
     handleDocumentHover,
+    handleDocumentSelect,
   } = useSidebar({
     onDocumentSelect,
     onDocumentDelete,
@@ -92,7 +93,12 @@ export function Sidebar({
                 trashedDocuments.map(doc => (
                   <div
                     key={doc.id}
-                    className="group flex items-center justify-between px-2 py-1 text-sm hover:bg-gray-200 rounded cursor-pointer"
+                    className={`group flex items-center justify-between px-2 py-1 text-sm rounded cursor-pointer ${
+                      currentDocumentId === doc.id
+                        ? 'bg-red-100 text-red-900'
+                        : 'hover:bg-gray-200'
+                    }`}
+                    onClick={() => handleDocumentSelect(doc.id)}
                     onMouseEnter={() => handleDocumentHover(doc.id)}
                     onMouseLeave={() => handleDocumentHover(null)}
                   >
@@ -144,7 +150,7 @@ export function Sidebar({
                         ? 'bg-blue-100 text-blue-900'
                         : 'hover:bg-gray-200'
                     }`}
-                    onClick={() => onDocumentSelect(doc.id)}
+                    onClick={() => handleDocumentSelect(doc.id)}
                     onMouseEnter={() => handleDocumentHover(doc.id)}
                     onMouseLeave={() => handleDocumentHover(null)}
                   >

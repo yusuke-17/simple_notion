@@ -72,6 +72,27 @@ func (r *DocumentCoreRepository) GetDocument(docID, userID int) (*models.Documen
 	return &doc, nil
 }
 
+// GetDocumentIncludingDeleted - 削除されたドキュメントも含めて単一文書を取得
+func (r *DocumentCoreRepository) GetDocumentIncludingDeleted(docID, userID int) (*models.Document, error) {
+	query, err := r.queries.Get("GetDocumentWithBlocksIncludingDeleted")
+	if err != nil {
+		return nil, err
+	}
+
+	var doc models.Document
+	err = r.db.QueryRow(query, docID, userID).Scan(
+		&doc.ID, &doc.UserID, &doc.ParentID, &doc.Title,
+		&doc.Content, &doc.TreePath, &doc.Level, &doc.SortOrder,
+		&doc.IsDeleted, &doc.CreatedAt, &doc.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &doc, nil
+}
+
 // GetAllDocuments - ユーザーの全文書を取得（非削除のみ）
 func (r *DocumentCoreRepository) GetAllDocuments(userID int) ([]models.Document, error) {
 	query, err := r.queries.Get("GetDocumentTree")

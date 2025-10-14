@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { Block } from '@/types'
+import type { Block, DocumentWithBlocks } from '@/types'
 import type { DragEndEvent } from '@dnd-kit/core'
 import {
-  type DocumentWithBlocks,
   createDocumentRequestOptions,
   handleApiResponse,
   getDocumentApiEndpoint,

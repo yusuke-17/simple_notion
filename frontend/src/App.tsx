@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import { Login } from '@/components/Login'
 import { Sidebar } from '@/components/Sidebar'
 import { DocumentEditor } from '@/components/DocumentEditor'
+import { ReadOnlyDocumentViewer } from '@/components/ReadOnlyDocumentViewer'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import type { Document } from '@/types'
@@ -12,6 +13,7 @@ function App() {
   const [currentDocumentId, setCurrentDocumentId] = useState<number | null>(
     null
   )
+  const [isReadOnlyMode, setIsReadOnlyMode] = useState(false)
   const [showingSidebar, setShowingSidebar] = useState(true)
   const [documents, setDocuments] = useState<Document[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
@@ -49,6 +51,18 @@ function App() {
     }
   }
 
+  /**
+   * ドキュメント選択ハンドラー
+   * 読み取り専用フラグをサポート
+   */
+  const handleDocumentSelect = (documentId: number, isReadOnly = false) => {
+    if (import.meta.env.DEV) {
+      console.log('App handleDocumentSelect:', { documentId, isReadOnly })
+    }
+    setCurrentDocumentId(documentId)
+    setIsReadOnlyMode(isReadOnly)
+  }
+
   const handleDocumentDelete = (deletedDocumentId: number) => {
     if (deletedDocumentId === currentDocumentId) {
       // 削除されたドキュメントが現在表示中の場合
@@ -57,14 +71,17 @@ function App() {
       )
 
       if (currentIndex > 0) {
-        // 前のドキュメントを表示
+        // 前のドキュメントを表示（編集可能モード）
         setCurrentDocumentId(documents[currentIndex - 1].id)
+        setIsReadOnlyMode(false)
       } else if (documents.length > 1) {
         // 最初のドキュメントが削除された場合、次のドキュメント（新しい最初）を表示
         setCurrentDocumentId(documents[1].id)
+        setIsReadOnlyMode(false)
       } else {
         // ドキュメントが1個しかない場合、初期画面を表示
         setCurrentDocumentId(null)
+        setIsReadOnlyMode(false)
       }
     }
 
@@ -89,6 +106,7 @@ function App() {
         const newDoc = await response.json()
         await loadDocuments()
         setCurrentDocumentId(newDoc.id)
+        setIsReadOnlyMode(false) // 新しいドキュメントは編集可能
       }
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -114,7 +132,7 @@ function App() {
     <div className="flex h-screen bg-white">
       <Sidebar
         currentDocumentId={currentDocumentId}
-        onDocumentSelect={setCurrentDocumentId}
+        onDocumentSelect={handleDocumentSelect}
         onDocumentDelete={handleDocumentDelete}
         showingSidebar={showingSidebar}
       />
@@ -154,7 +172,11 @@ function App() {
         {/* Editor */}
         <main className="flex-1 overflow-hidden">
           {currentDocumentId ? (
-            <DocumentEditor documentId={currentDocumentId} />
+            isReadOnlyMode ? (
+              <ReadOnlyDocumentViewer documentId={currentDocumentId} />
+            ) : (
+              <DocumentEditor documentId={currentDocumentId} />
+            )
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
               <div className="text-center">

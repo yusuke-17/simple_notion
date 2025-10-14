@@ -169,7 +169,7 @@ describe('Sidebar Component', () => {
     const secondDoc = screen.getByText('Second Document')
     await user.click(secondDoc)
 
-    expect(mockOnDocumentSelect).toHaveBeenCalledWith(2)
+    expect(mockOnDocumentSelect).toHaveBeenCalledWith(2, false)
   })
 
   it('新しいドキュメントを作成できる', async () => {

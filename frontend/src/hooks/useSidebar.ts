@@ -9,7 +9,7 @@ import {
 } from '@/utils/sidebarUtils'
 
 interface UseSidebarProps {
-  onDocumentSelect: (documentId: number) => void
+  onDocumentSelect: (documentId: number, isReadOnly?: boolean) => void
   onDocumentDelete: (documentId: number) => void
 }
 
@@ -241,11 +241,20 @@ export const useSidebar = ({
 
   /**
    * Handle document selection
+   * ゴミ箱内のドキュメントは読み取り専用フラグ付きで選択可能
    */
   const handleDocumentSelect = useCallback(
     (docId: number) => {
-      if (!showingTrash) {
-        onDocumentSelect(docId)
+      if (import.meta.env.DEV) {
+        console.log('handleDocumentSelect called:', { docId, showingTrash })
+      }
+
+      if (showingTrash) {
+        // ゴミ箱内のドキュメントは読み取り専用モードで選択
+        onDocumentSelect(docId, true)
+      } else {
+        // 通常のドキュメントは編集可能モードで選択
+        onDocumentSelect(docId, false)
       }
     },
     [showingTrash, onDocumentSelect]

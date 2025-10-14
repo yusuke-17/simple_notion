@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import type { Block } from '@/types'
+import type { Block, DocumentWithBlocks } from '@/types'
 import {
   hasDocumentChanged,
   prepareDocumentUpdatePayload,
@@ -7,7 +7,6 @@ import {
   handleApiResponse,
   getDocumentApiEndpoint,
   SAVE_DEBOUNCE_DELAY,
-  type DocumentWithBlocks,
 } from '@/utils/documentUtils'
 
 /**

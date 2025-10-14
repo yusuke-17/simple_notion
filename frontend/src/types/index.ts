@@ -92,3 +92,25 @@ export interface UploadProgress {
   status: 'uploading' | 'completed' | 'error'
   error?: string
 }
+
+// Document with blocks type for the editor (共通化のためここに移動)
+export interface DocumentWithBlocks extends Document {
+  blocks?: Block[]
+}
+
+// 読み取り専用ドキュメント表示関連の型定義
+export interface ReadOnlyDocumentViewerProps {
+  documentId: number
+  onClose?: () => void
+}
+
+export interface UseReadOnlyDocumentViewerReturn {
+  // ドキュメント状態
+  document: DocumentWithBlocks | null
+  isLoading: boolean
+  error: string | null
+
+  // 計算されたプロパティ
+  isEmpty: boolean
+  isReady: boolean
+}

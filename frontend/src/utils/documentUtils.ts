@@ -1,15 +1,8 @@
-import type { Document, Block } from '@/types'
+import type { Block } from '@/types'
 
 /**
  * Document operation utilities - Pure functions for document manipulation
  */
-
-/**
- * Document with blocks type for the editor
- */
-export interface DocumentWithBlocks extends Document {
-  blocks?: Block[]
-}
 
 /**
  * Check if document content has changed from original
@@ -114,6 +107,15 @@ export const handleApiResponse = async <T>(response: Response): Promise<T> => {
  */
 export const getDocumentApiEndpoint = (documentId: number): string => {
   return `/api/documents/${documentId}`
+}
+
+/**
+ * Get API endpoint for document including deleted ones
+ */
+export const getDocumentApiEndpointIncludingDeleted = (
+  documentId: number
+): string => {
+  return `/api/documents/${documentId}?includeDeleted=true`
 }
 
 /**

@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"simple-notion-backend/internal/middleware"
+	"simple-notion-backend/internal/models"
 )
 
 func (h *DocumentHandler) GetDocumentTree(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +33,16 @@ func (h *DocumentHandler) GetDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doc, err := h.DocumentService.GetDocumentWithBlocks(docID, userID)
+	// includeDeleted クエリパラメータをチェック
+	includeDeleted := r.URL.Query().Get("includeDeleted") == "true"
+
+	var doc *models.DocumentWithBlocks
+	if includeDeleted {
+		doc, err = h.DocumentService.GetDocumentWithBlocksIncludingDeleted(docID, userID)
+	} else {
+		doc, err = h.DocumentService.GetDocumentWithBlocks(docID, userID)
+	}
+
 	if err != nil {
 		http.Error(w, "Document not found", http.StatusNotFound)
 		return

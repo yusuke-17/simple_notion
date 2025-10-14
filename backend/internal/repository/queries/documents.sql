@@ -4,6 +4,12 @@ SELECT id, user_id, parent_id, title, content, tree_path, level, sort_order,
 FROM documents 
 WHERE id = $1 AND user_id = $2 AND is_deleted = false;
 
+-- name: GetDocumentWithBlocksIncludingDeleted
+SELECT id, user_id, parent_id, title, content, tree_path, level, sort_order, 
+       is_deleted, created_at, updated_at
+FROM documents 
+WHERE id = $1 AND user_id = $2;
+
 -- name: GetDocumentTree
 SELECT id, user_id, parent_id, title, content, tree_path, level, sort_order, 
        is_deleted, created_at, updated_at

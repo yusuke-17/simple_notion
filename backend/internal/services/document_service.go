@@ -52,6 +52,26 @@ func (s *DocumentService) GetDocumentWithBlocks(docID, userID int) (*models.Docu
 	}, nil
 }
 
+// GetDocumentWithBlocksIncludingDeleted - 削除されたドキュメントも含めて文書とブロック情報を統合取得
+func (s *DocumentService) GetDocumentWithBlocksIncludingDeleted(docID, userID int) (*models.DocumentWithBlocks, error) {
+	// 削除されたドキュメントも含めて文書基本情報を取得
+	doc, err := s.documentRepo.GetDocumentIncludingDeleted(docID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get document: %w", err)
+	}
+
+	// ブロック情報を取得
+	blocks, err := s.blockRepo.GetBlocksByDocumentID(docID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get blocks: %w", err)
+	}
+
+	return &models.DocumentWithBlocks{
+		Document: *doc,
+		Blocks:   blocks,
+	}, nil
+}
+
 // GetDocumentTree - 文書ツリー構造を取得
 // 既存のDocumentRepository.GetDocumentTreeと同等の機能
 func (s *DocumentService) GetDocumentTree(userID int) ([]models.DocumentTreeNode, error) {
