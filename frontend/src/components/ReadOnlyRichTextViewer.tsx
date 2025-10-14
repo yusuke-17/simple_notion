@@ -15,11 +15,6 @@ interface ReadOnlyRichTextViewerProps {
 export function ReadOnlyRichTextViewer({
   content,
 }: ReadOnlyRichTextViewerProps) {
-  // デバッグログ
-  console.log('ReadOnlyRichTextViewer content:', content)
-  console.log('Content type:', typeof content)
-  console.log('Is content an object?:', typeof content === 'object')
-
   // JSONコンテンツをパースしてオブジェクトに変換
   let parsedContent
   let isValidJson = false
@@ -30,17 +25,15 @@ export function ReadOnlyRichTextViewer({
     if (typeof content === 'object') {
       parsedContent = content
       isValidJson = true
-      console.log('Content is already an object:', parsedContent)
     } else {
       // 文字列の場合はJSON.parseを試みる
       try {
         parsedContent = JSON.parse(content)
         isValidJson = true
-        console.log('Parsed JSON successfully:', parsedContent)
-      } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (_) {
         // JSON パースに失敗した場合はプレーンテキストとして扱う
         parsedContent = content
-        console.log('Failed to parse JSON, treating as plain text:', e)
       }
     }
   }
