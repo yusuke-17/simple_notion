@@ -142,3 +142,102 @@ export const TOOLBAR_CONFIG = {
   BLUR_TIMEOUT: 100,
   CONTENT_SYNC_DELAY: 50,
 } as const
+
+/**
+ * URL検証：有効なURLかどうかをチェック
+ */
+export const isValidUrl = (url: string): boolean => {
+  if (!url || url.trim() === '') return false
+
+  try {
+    // URLオブジェクトで検証
+    new URL(url)
+    return true
+  } catch {
+    // http://またはhttps://が欠けている場合を考慮
+    try {
+      new URL(`https://${url}`)
+      // www.で始まるか、ドットが含まれる場合は有効とみなす
+      return url.includes('.') && !url.startsWith('.')
+    } catch {
+      return false
+    }
+  }
+}
+
+/**
+ * URLの正規化：http(s)://がない場合に追加
+ */
+export const normalizeUrl = (url: string): string => {
+  if (!url || url.trim() === '') return ''
+
+  const trimmedUrl = url.trim()
+
+  // すでにプロトコルがある場合はそのまま返す
+  if (/^https?:\/\//i.test(trimmedUrl)) {
+    return trimmedUrl
+  }
+
+  // プロトコルがない場合はhttps://を追加
+  return `https://${trimmedUrl}`
+}
+
+/**
+ * URL自動検出のための正規表現パターン
+ */
+export const URL_PATTERNS = {
+  // http(s)://で始まるURL
+  WITH_PROTOCOL:
+    /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/gi,
+  // www.で始まるURL
+  WITH_WWW:
+    /www\.[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/gi,
+  // ドメイン形式（example.com等）
+  DOMAIN:
+    /(?:^|[\s])([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.)+[a-zA-Z]{2,}(?:\/[-a-zA-Z0-9()@:%_+.~#?&//=]*)?(?:\s|$)/gi,
+} as const
+
+/**
+ * テキストからURLを検出
+ */
+export const detectUrls = (text: string): string[] => {
+  const urls: string[] = []
+
+  // http(s)://で始まるURLを検出
+  const withProtocol = text.match(URL_PATTERNS.WITH_PROTOCOL)
+  if (withProtocol) {
+    urls.push(...withProtocol)
+  }
+
+  // www.で始まるURLを検出
+  const withWww = text.match(URL_PATTERNS.WITH_WWW)
+  if (withWww) {
+    urls.push(...withWww.map(url => `https://${url}`))
+  }
+
+  return [...new Set(urls)] // 重複を除去
+}
+
+/**
+ * リンクの表示テキストを取得（URLが長い場合は短縮）
+ */
+export const getLinkDisplayText = (
+  url: string,
+  maxLength: number = 50
+): string => {
+  try {
+    const urlObj = new URL(url)
+    const displayText = urlObj.hostname + urlObj.pathname
+
+    if (displayText.length > maxLength) {
+      return displayText.substring(0, maxLength - 3) + '...'
+    }
+
+    return displayText
+  } catch {
+    if (url.length > maxLength) {
+      return url.substring(0, maxLength - 3) + '...'
+    }
+    return url
+  }
+}

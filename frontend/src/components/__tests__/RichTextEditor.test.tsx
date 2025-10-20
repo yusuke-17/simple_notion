@@ -104,6 +104,12 @@ vi.mock('lucide-react', () => ({
   Type: (props: { className?: string }) => (
     <span data-testid="type-icon" {...props} />
   ),
+  Link: (props: { className?: string }) => (
+    <span data-testid="link-icon" {...props} />
+  ),
+  Link2Off: (props: { className?: string }) => (
+    <span data-testid="link2off-icon" {...props} />
+  ),
 }))
 
 // Mock ColorPalette components
@@ -149,6 +155,50 @@ vi.mock('@/components/ui/ColorPalette', () => ({
   ),
 }))
 
+// Mock LinkEditDialog component
+vi.mock('@/components/ui/LinkEditDialog', () => ({
+  LinkEditDialog: ({
+    onSetLink,
+    onRemoveLink,
+    onClose,
+    initialUrl,
+    initialText,
+  }: {
+    onSetLink: (url: string, text: string, openInNewTab: boolean) => void
+    onRemoveLink?: () => void
+    onClose: () => void
+    initialUrl?: string
+    initialText?: string
+  }) => (
+    <div data-testid="link-edit-dialog">
+      <input
+        data-testid="link-url-input"
+        defaultValue={initialUrl}
+        placeholder="URL"
+      />
+      <input
+        data-testid="link-text-input"
+        defaultValue={initialText}
+        placeholder="Text"
+      />
+      <button
+        data-testid="set-link-button"
+        onClick={() => onSetLink('https://example.com', 'Example', true)}
+      >
+        Set Link
+      </button>
+      {onRemoveLink && (
+        <button data-testid="remove-link-button" onClick={onRemoveLink}>
+          Remove Link
+        </button>
+      )}
+      <button data-testid="close-link-dialog" onClick={onClose}>
+        Close
+      </button>
+    </div>
+  ),
+}))
+
 describe('RichTextEditor', () => {
   const mockOnUpdate = vi.fn()
   const mockOnFocus = vi.fn()
@@ -171,6 +221,12 @@ describe('RichTextEditor', () => {
     setHighlightColor: vi.fn(),
     getTextColor: vi.fn(() => ''),
     getHighlightColor: vi.fn(() => ''),
+    // リンク機能のモック
+    setLink: vi.fn(),
+    updateLink: vi.fn(),
+    removeLink: vi.fn(),
+    getLink: vi.fn(() => ''),
+    isLinkActive: vi.fn(() => false),
   }
 
   beforeEach(() => {

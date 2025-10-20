@@ -14,6 +14,7 @@ import Underline from '@tiptap/extension-underline'
 import { Color } from '@tiptap/extension-color'
 import { Highlight } from '@tiptap/extension-highlight'
 import { TextStyle } from '@tiptap/extension-text-style'
+import Link from '@tiptap/extension-link'
 import {
   normalizeContent,
   getSelectionCoordinates,
@@ -135,6 +136,16 @@ export const useRichTextEditor = ({
       // 背景色（ハイライト）
       Highlight.configure({
         multicolor: true,
+      }),
+      // リンク拡張
+      Link.configure({
+        openOnClick: false, // クリックで開かない（編集優先）
+        HTMLAttributes: {
+          class:
+            'text-blue-600 underline decoration-blue-600 hover:text-blue-700 cursor-pointer',
+          rel: 'noopener noreferrer', // セキュリティ対策
+        },
+        validate: href => /^https?:\/\//.test(href), // http(s)://のみ許可
       }),
       BoldExt,
       ItalicExt,
@@ -363,6 +374,64 @@ export const useRichTextEditor = ({
     [editor]
   )
 
+  /**
+   * リンク機能
+   */
+  const setLink = useCallback(
+    (url: string, text?: string, openInNewTab: boolean = true) => {
+      if (!editor) return
+
+      const attributes = openInNewTab
+        ? { href: url, target: '_blank' }
+        : { href: url }
+
+      if (text && text.trim()) {
+        // テキストが指定されている場合は、選択範囲を置き換える
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: 'text',
+            text: text,
+            marks: [{ type: 'link', attrs: attributes }],
+          })
+          .run()
+      } else {
+        // テキストが指定されていない場合は、選択範囲にリンクを設定
+        editor.chain().focus().setLink(attributes).run()
+      }
+      setShowContextMenu(false)
+    },
+    [editor]
+  )
+
+  const updateLink = useCallback(
+    (url: string, openInNewTab: boolean = true) => {
+      if (!editor) return
+
+      const attributes = openInNewTab
+        ? { href: url, target: '_blank' }
+        : { href: url }
+
+      editor.chain().focus().setLink(attributes).run()
+      setShowContextMenu(false)
+    },
+    [editor]
+  )
+
+  const removeLink = useCallback(() => {
+    editor?.chain().focus().unsetLink().run()
+    setShowContextMenu(false)
+  }, [editor])
+
+  const getLink = useCallback(() => {
+    return editor?.getAttributes('link').href || ''
+  }, [editor])
+
+  const isLinkActive = useCallback(() => {
+    return editor?.isActive('link') ?? false
+  }, [editor])
+
   return {
     // Editor instance
     editor,
@@ -387,6 +456,13 @@ export const useRichTextEditor = ({
     setHighlightColor,
     getTextColor,
     getHighlightColor,
+
+    // Link actions
+    setLink,
+    updateLink,
+    removeLink,
+    getLink,
+    isLinkActive,
 
     // Computed values
     placeholder,

@@ -7,9 +7,12 @@ import {
   Strikethrough,
   Type,
   Palette,
+  Link as LinkIcon,
+  Link2Off,
 } from 'lucide-react'
 import { useRichTextEditor } from '@/hooks/useRichTextEditor'
 import { ColorPalette, ColorPaletteTrigger } from '@/components/ui/ColorPalette'
+import { LinkEditDialog } from '@/components/ui/LinkEditDialog'
 import { useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 
@@ -41,6 +44,13 @@ export function RichTextEditor({
     'text' | 'highlight'
   >('text')
 
+  // リンクダイアログの表示状態管理
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
+  const [linkDialogPosition, setLinkDialogPosition] = useState({
+    top: 0,
+    left: 0,
+  })
+
   // フックが全てのリッチテキストエディターロジックをカプセル化
   const {
     editor,
@@ -58,6 +68,10 @@ export function RichTextEditor({
     setHighlightColor,
     getTextColor,
     getHighlightColor,
+    setLink,
+    removeLink,
+    getLink,
+    isLinkActive,
   } = useRichTextEditor({
     content,
     placeholder,
@@ -85,6 +99,36 @@ export function RichTextEditor({
   // カラーパレットを閉じる処理
   const handleClosePalette = () => {
     setShowColorPalette(false)
+  }
+
+  // リンクダイアログを開く処理
+  const handleOpenLinkDialog = () => {
+    setLinkDialogPosition(toolbarPosition)
+    setShowLinkDialog(true)
+    setShowColorPalette(false)
+  }
+
+  // リンク設定処理
+  const handleSetLink = (url: string, text: string, openInNewTab: boolean) => {
+    setLink(url, text, openInNewTab)
+    setShowLinkDialog(false)
+  }
+
+  // リンク解除処理
+  const handleRemoveLink = () => {
+    removeLink()
+    setShowLinkDialog(false)
+  }
+
+  // リンクダイアログを閉じる処理
+  const handleCloseLinkDialog = () => {
+    setShowLinkDialog(false)
+  }
+
+  // 選択されたテキストを取得
+  const getSelectedText = () => {
+    const selection = window.getSelection()
+    return selection?.toString() || ''
   }
 
   return (
@@ -154,6 +198,31 @@ export function RichTextEditor({
               isActive={showColorPalette && colorPaletteType === 'highlight'}
               onClick={() => handleColorPaletteToggle('highlight')}
             />
+
+            {/* 区切り線 */}
+            <div className="w-px bg-gray-200 mx-1" />
+
+            {/* リンクボタン */}
+            <Button
+              size="sm"
+              variant={isLinkActive() ? 'default' : 'ghost'}
+              onClick={handleOpenLinkDialog}
+              className="h-6 w-6 p-1"
+              title="リンクを追加"
+            >
+              <LinkIcon className="h-3 w-3" />
+            </Button>
+            {isLinkActive() && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleRemoveLink}
+                className="h-6 w-6 p-1"
+                title="リンクを解除"
+              >
+                <Link2Off className="h-3 w-3" />
+              </Button>
+            )}
           </div>
         )}
 
@@ -177,6 +246,18 @@ export function RichTextEditor({
               onClose={handleClosePalette}
             />
           </div>
+        )}
+
+        {/* リンク編集ダイアログ */}
+        {showLinkDialog && (
+          <LinkEditDialog
+            initialUrl={getLink()}
+            initialText={getSelectedText()}
+            position={linkDialogPosition}
+            onSetLink={handleSetLink}
+            onRemoveLink={isLinkActive() ? handleRemoveLink : undefined}
+            onClose={handleCloseLinkDialog}
+          />
         )}
 
         {/* Context menu for right-click formatting */}
@@ -260,6 +341,31 @@ export function RichTextEditor({
                   />
                 )}
               </Button>
+
+              {/* 区切り線 */}
+              <div className="h-px bg-gray-200 my-1" />
+
+              {/* リンクオプション */}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleOpenLinkDialog}
+                className="justify-start h-7 px-2"
+              >
+                <LinkIcon className="h-3 w-3 mr-2" />
+                {isLinkActive() ? 'リンクを編集' : 'リンクを追加'}
+              </Button>
+              {isLinkActive() && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleRemoveLink}
+                  className="justify-start h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Link2Off className="h-3 w-3 mr-2" />
+                  リンクを解除
+                </Button>
+              )}
             </div>
           </div>
         )}
