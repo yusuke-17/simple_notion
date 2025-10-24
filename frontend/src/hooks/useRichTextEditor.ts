@@ -15,6 +15,7 @@ import { Color } from '@tiptap/extension-color'
 import { Highlight } from '@tiptap/extension-highlight'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Link from '@tiptap/extension-link'
+import { Plugin, PluginKey } from 'prosemirror-state'
 import {
   normalizeContent,
   getSelectionCoordinates,
@@ -116,6 +117,51 @@ export const useRichTextEditor = ({
   }, [])
 
   /**
+   * カスタムLinkエクステンション: Cmd/Ctrl+クリックでリンクを開く
+   * contenteditable内でもCmd/Ctrl+クリックを正しく処理
+   */
+  const CustomLink = Link.extend({
+    addProseMirrorPlugins() {
+      return [
+        new Plugin({
+          key: new PluginKey('handleClickLink'),
+          props: {
+            handleDOMEvents: {
+              click: (_view, event) => {
+                const target = event.target as HTMLElement
+
+                // リンク要素またはその子要素がクリックされたか確認
+                const link = target.closest('a')
+                if (!link) return false
+
+                // Cmd（Mac）またはCtrl（Windows/Linux）が押されているか確認
+                const isCmdOrCtrl = event.metaKey || event.ctrlKey
+
+                if (isCmdOrCtrl) {
+                  // デフォルトの動作を防止（編集モードの動作をキャンセル）
+                  event.preventDefault()
+                  event.stopPropagation()
+
+                  // リンク先URLを取得
+                  const href = link.getAttribute('href')
+                  if (href) {
+                    // 新しいタブでリンクを開く
+                    window.open(href, '_blank', 'noopener,noreferrer')
+                  }
+
+                  return true // イベントを処理したことを示す
+                }
+
+                return false // 通常のクリックは編集モードとして処理
+              },
+            },
+          },
+        }),
+      ]
+    },
+  })
+
+  /**
    * TipTap editor configuration
    */
   const editor = useEditor({
@@ -137,8 +183,8 @@ export const useRichTextEditor = ({
       Highlight.configure({
         multicolor: true,
       }),
-      // リンク拡張
-      Link.configure({
+      // カスタムリンク拡張（Cmd/Ctrl+クリックでリンクを開く）
+      CustomLink.configure({
         openOnClick: false, // クリックで開かない（編集優先）
         HTMLAttributes: {
           class:
