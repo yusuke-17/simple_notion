@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
 import { useFileBlockEditor } from '../useFileBlockEditor'
 
 // uploadFile関数をモック
@@ -33,6 +33,12 @@ describe('useFileBlockEditor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useFakeTimers() // タイマーをモック化
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers() // テスト後に実タイマーに戻す
   })
 
   it('初期状態が正しく設定される', () => {
@@ -77,14 +83,19 @@ describe('useFileBlockEditor', () => {
       target: { files: [file] },
     } as unknown as React.ChangeEvent<HTMLInputElement>
 
+    // アップロード処理を開始
     await act(async () => {
-      result.current.handleFileSelect(event)
-      await waitFor(() => expect(result.current.isUploading).toBe(false), {
-        timeout: 1000,
-      })
+      const uploadPromise = result.current.handleFileSelect(event)
+
+      // プログレスのsetIntervalを進める
+      vi.advanceTimersByTime(2000)
+
+      // アップロード完了を待つ
+      await uploadPromise
     })
 
-    // アップロード完了後の状態確認
+    // 最終状態の確認
+    expect(result.current.isUploading).toBe(false)
     expect(result.current.content.filename).toBe('test.pdf')
     expect(result.current.uploadError).toBeNull()
     expect(mockOnContentChange).toHaveBeenCalled()
@@ -172,5 +183,143 @@ describe('useFileBlockEditor', () => {
 
     expect(result.current.hasFile).toBe(false)
     expect(mockOnContentChange).not.toHaveBeenCalled()
+  })
+
+  // 追加テストケース
+  it('ドラッグ&ドロップでファイルアップロードが実行される', async () => {
+    const { result } = renderHook(() =>
+      useFileBlockEditor(undefined, mockOnContentChange)
+    )
+
+    const file = new File(['test content'], 'dropped.pdf', {
+      type: 'application/pdf',
+    })
+
+    const event = {
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      dataTransfer: { files: [file] },
+    } as unknown as React.DragEvent<HTMLDivElement>
+
+    await act(async () => {
+      const uploadPromise = result.current.handleFileDrop(event)
+      vi.advanceTimersByTime(2000)
+      await uploadPromise
+    })
+
+    expect(result.current.isUploading).toBe(false)
+    expect(result.current.content.filename).toBe('dropped.pdf')
+    expect(mockOnContentChange).toHaveBeenCalled()
+  })
+
+  it('アップロード進行状況が正しく更新される', async () => {
+    const { result } = renderHook(() =>
+      useFileBlockEditor(undefined, mockOnContentChange)
+    )
+
+    const file = new File(['test'], 'test.pdf', { type: 'application/pdf' })
+    const event = {
+      target: { files: [file] },
+    } as unknown as React.ChangeEvent<HTMLInputElement>
+
+    await act(async () => {
+      const uploadPromise = result.current.handleFileSelect(event)
+
+      // タイマーを進めてアップロード完了
+      vi.advanceTimersByTime(2000)
+      await uploadPromise
+    })
+
+    // アップロード完了後、プログレスは100%になる
+    expect(result.current.uploadProgress).toBe(100)
+  })
+
+  it('ファイルダウンロードが正しく動作する', () => {
+    const initialContent = {
+      filename: 'test.pdf',
+      fileSize: 1024,
+      mimeType: 'application/pdf',
+      uploadedAt: '2024-01-01T00:00:00Z',
+      downloadUrl: 'http://localhost:8080/uploads/test.pdf',
+      originalName: 'original-test.pdf',
+    }
+
+    const { result } = renderHook(() =>
+      useFileBlockEditor(initialContent, mockOnContentChange)
+    )
+
+    // DOM操作をモック
+    const mockLink = document.createElement('a')
+    const mockClick = vi.fn()
+    mockLink.click = mockClick
+
+    const createElementSpy = vi
+      .spyOn(document, 'createElement')
+      .mockReturnValue(mockLink)
+    const appendChildSpy = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation(() => mockLink)
+    const removeChildSpy = vi
+      .spyOn(document.body, 'removeChild')
+      .mockImplementation(() => mockLink)
+
+    act(() => {
+      result.current.downloadFile()
+    })
+
+    expect(createElementSpy).toHaveBeenCalledWith('a')
+    expect(mockClick).toHaveBeenCalled()
+    expect(appendChildSpy).toHaveBeenCalled()
+    expect(removeChildSpy).toHaveBeenCalled()
+  })
+
+  it('計算されたプロパティが正しく返される', () => {
+    const initialContent = {
+      filename: 'test.pdf',
+      fileSize: 2048,
+      mimeType: 'application/pdf',
+      uploadedAt: '2024-01-01T00:00:00Z',
+      downloadUrl: 'http://localhost:8080/uploads/test.pdf',
+      originalName: 'test.pdf',
+    }
+
+    const { result } = renderHook(() =>
+      useFileBlockEditor(initialContent, mockOnContentChange)
+    )
+
+    expect(result.current.hasFile).toBe(true)
+    expect(result.current.isReady).toBe(true)
+    expect(result.current.fileTypeName).toBe('PDF')
+    expect(result.current.formattedFileSize).toBe('2048 Bytes')
+  })
+
+  it('ファイル入力参照が正しく設定される', () => {
+    const { result } = renderHook(() =>
+      useFileBlockEditor(undefined, mockOnContentChange)
+    )
+
+    expect(result.current.fileInputRef).toBeDefined()
+    expect(result.current.fileInputRef.current).toBeNull()
+  })
+
+  it('アップロード中は isReady が false になる', async () => {
+    const { result } = renderHook(() =>
+      useFileBlockEditor(undefined, mockOnContentChange)
+    )
+
+    const file = new File(['test'], 'test.pdf', { type: 'application/pdf' })
+    const event = {
+      target: { files: [file] },
+    } as unknown as React.ChangeEvent<HTMLInputElement>
+
+    await act(async () => {
+      const uploadPromise = result.current.handleFileSelect(event)
+      expect(result.current.isReady).toBe(false)
+
+      vi.advanceTimersByTime(2000)
+      await uploadPromise
+    })
+
+    expect(result.current.isReady).toBe(true)
   })
 })
