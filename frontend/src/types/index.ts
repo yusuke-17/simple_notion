@@ -73,12 +73,28 @@ export interface ImageBlockContent {
   fileSize?: number // ファイルサイズ（バイト）
 }
 
+// File block specific types (PDF, Word, Excel等)
+export interface FileBlockContent {
+  filename: string // ファイル名
+  fileSize: number // ファイルサイズ（バイト）
+  mimeType: string // MIMEタイプ
+  uploadedAt: string // アップロード日時
+  downloadUrl: string // ダウンロードURL
+  previewUrl?: string // プレビューURL（PDF等）
+  originalName?: string // 元のファイル名（ユーザーが見やすい名前）
+}
+
 // Upload related types
 export interface UploadResponse {
   success: boolean
   filename?: string
   url?: string
   message?: string
+}
+
+export interface FileUploadResponse extends UploadResponse {
+  mimeType?: string
+  fileSize?: number
 }
 
 export interface UploadError {

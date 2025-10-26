@@ -113,6 +113,196 @@ func TestUploadImageHandler(t *testing.T) {
 	})
 }
 
+// TestUploadFileHandler ファイルアップロードハンドラーのテスト
+func TestUploadFileHandler(t *testing.T) {
+	// テスト用のuploadsディレクトリを作成
+	testUploadDir := "./test_uploads"
+	defer func() {
+		os.RemoveAll(testUploadDir)
+	}()
+
+	t.Run("有効なPDFファイルのアップロード", func(t *testing.T) {
+		// テスト用のPDFデータを作成（PDFヘッダー）
+		pdfData := []byte("%PDF-1.4\n%test pdf content\n%%EOF")
+
+		// multipart/form-dataを作成
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		part, err := writer.CreatePart(map[string][]string{
+			"Content-Disposition": {"form-data; name=\"file\"; filename=\"test.pdf\""},
+			"Content-Type":        {"application/pdf"},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create form file: %v", err)
+		}
+
+		_, err = part.Write(pdfData)
+		if err != nil {
+			t.Fatalf("Failed to write pdf data: %v", err)
+		}
+
+		writer.Close()
+
+		// リクエストを作成
+		req := httptest.NewRequest("POST", "/api/upload/file", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.Header.Set("Origin", "http://localhost:5173")
+
+		// レスポンスレコーダーを作成
+		w := httptest.NewRecorder()
+
+		// ハンドラーを実行
+		UploadFileHandler(w, req)
+
+		// レスポンスを検証
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code 200, got %d. Response: %s", w.Code, w.Body.String())
+		}
+
+		// レスポンスボディにsuccessフィールドが含まれていることを確認
+		responseBody := w.Body.String()
+		if !bytes.Contains([]byte(responseBody), []byte(`"success":true`)) {
+			t.Errorf("Response should contain success: true, got: %s", responseBody)
+		}
+	})
+
+	t.Run("有効なDocxファイルのアップロード", func(t *testing.T) {
+		// テスト用のDocxデータを作成（ZIPヘッダー - docxはZIPベース）
+		docxData := []byte("PK\x03\x04test docx content")
+
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		part, err := writer.CreatePart(map[string][]string{
+			"Content-Disposition": {"form-data; name=\"file\"; filename=\"test.docx\""},
+			"Content-Type":        {"application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create form file: %v", err)
+		}
+
+		_, err = part.Write(docxData)
+		if err != nil {
+			t.Fatalf("Failed to write docx data: %v", err)
+		}
+
+		writer.Close()
+
+		req := httptest.NewRequest("POST", "/api/upload/file", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.Header.Set("Origin", "http://localhost:5173")
+
+		w := httptest.NewRecorder()
+		UploadFileHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code 200, got %d. Response: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("ファイルが添付されていない場合", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		writer.Close()
+
+		req := httptest.NewRequest("POST", "/api/upload/file", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		w := httptest.NewRecorder()
+		UploadFileHandler(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("無効なHTTPメソッド", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/upload/file", nil)
+		w := httptest.NewRecorder()
+
+		UploadFileHandler(w, req)
+
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status code 405, got %d", w.Code)
+		}
+	})
+
+	t.Run("OPTIONSリクエスト（CORS対応確認）", func(t *testing.T) {
+		req := httptest.NewRequest("OPTIONS", "/api/upload/file", nil)
+		req.Header.Set("Origin", "http://localhost:5173")
+		w := httptest.NewRecorder()
+
+		UploadFileHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code 200 for OPTIONS, got %d", w.Code)
+		}
+
+		// CORSヘッダーが設定されているか確認
+		if w.Header().Get("Access-Control-Allow-Origin") == "" {
+			t.Error("Access-Control-Allow-Origin header should be set")
+		}
+
+		if w.Header().Get("Access-Control-Allow-Credentials") != "true" {
+			t.Error("Access-Control-Allow-Credentials should be true")
+		}
+	})
+}
+
+// TestIsValidFileType ファイルタイプ検証のテスト
+func TestIsValidFileType(t *testing.T) {
+	tests := []struct {
+		contentType string
+		expected    bool
+	}{
+		{"application/pdf", true},
+		{"application/vnd.openxmlformats-officedocument.wordprocessingml.document", true},
+		{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", true},
+		{"application/msword", true},
+		{"text/plain", true},
+		{"application/zip", true},
+		{"application/json", true},
+		{"text/csv", true},
+		{"image/jpeg", false},
+		{"video/mp4", false},
+		{"audio/mpeg", false},
+	}
+
+	for _, test := range tests {
+		result := isValidFileType(test.contentType)
+		if result != test.expected {
+			t.Errorf("isValidFileType(%s) = %v, expected %v", test.contentType, result, test.expected)
+		}
+	}
+}
+
+// TestGetFileMIMETypeFromExtension ファイル拡張子からMIMEタイプ取得のテスト
+func TestGetFileMIMETypeFromExtension(t *testing.T) {
+	tests := []struct {
+		filename string
+		expected string
+	}{
+		{"document.pdf", "application/pdf"},
+		{"document.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+		{"spreadsheet.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+		{"presentation.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"},
+		{"document.doc", "application/msword"},
+		{"text.txt", "text/plain"},
+		{"archive.zip", "application/zip"},
+		{"data.json", "application/json"},
+		{"data.csv", "text/csv"},
+		{"unknown.xyz", ""},
+	}
+
+	for _, test := range tests {
+		result := getFileMIMETypeFromExtension(test.filename)
+		if result != test.expected {
+			t.Errorf("getFileMIMETypeFromExtension(%s) = %s, expected %s", test.filename, result, test.expected)
+		}
+	}
+}
+
 func TestServeUploadsHandler(t *testing.T) {
 	// テスト用のファイルを作成
 	testUploadDir := "/tmp/test_uploads"

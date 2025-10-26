@@ -122,6 +122,7 @@ func (r *Router) setupProtectedRoutes() {
 
 	// ファイルアップロード関連
 	api.HandleFunc("/upload/image", handlers.UploadImageHandler).Methods("POST", "OPTIONS")
+	api.HandleFunc("/upload/file", handlers.UploadFileHandler).Methods("POST", "OPTIONS")
 
 	// ドキュメント関連
 	api.HandleFunc("/documents", r.docHandler.GetDocuments).Methods("GET")

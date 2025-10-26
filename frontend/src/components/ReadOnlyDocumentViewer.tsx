@@ -1,7 +1,20 @@
 import { Input } from '@/components/ui/input'
 import { ReadOnlyRichTextViewer } from './ReadOnlyRichTextViewer'
-import type { ReadOnlyDocumentViewerProps } from '@/types'
+import type { ReadOnlyDocumentViewerProps, FileBlockContent } from '@/types'
 import { useReadOnlyDocumentViewer } from '@/hooks/useReadOnlyDocumentViewer'
+import {
+  Download,
+  File,
+  FileText,
+  FileSpreadsheet,
+  FileCode,
+  FileArchive,
+} from 'lucide-react'
+import {
+  getFileIconName,
+  formatFileSize,
+  getFileTypeName,
+} from '@/utils/fileUploadUtils'
 
 /**
  * 読み取り専用ドキュメントビューアーコンポーネント
@@ -84,6 +97,9 @@ export function ReadOnlyDocumentViewer({
                     {block.type === 'image' ? (
                       /* 画像ブロックの読み取り専用表示 */
                       <ReadOnlyImageBlock content={block.content} />
+                    ) : block.type === 'file' ? (
+                      /* ファイルブロックの読み取り専用表示 */
+                      <ReadOnlyFileBlock content={block.content} />
                     ) : (
                       /* テキストブロックの読み取り専用表示 */
                       <div data-testid={`readonly-block-content-${block.id}`}>
@@ -134,6 +150,81 @@ function ReadOnlyImageBlock({ content }: { content: string }) {
     return (
       <div className="text-gray-500 italic">
         画像を表示できません: {content}
+      </div>
+    )
+  }
+}
+
+/**
+ * ファイルブロックの読み取り専用表示コンポーネント
+ */
+function ReadOnlyFileBlock({ content }: { content: string }) {
+  try {
+    const fileData: FileBlockContent = JSON.parse(content)
+
+    // ファイルアイコンを取得
+    const getFileIcon = (mimeType: string) => {
+      const iconName = getFileIconName(mimeType)
+
+      switch (iconName) {
+        case 'FileText':
+          return <FileText className="h-10 w-10" />
+        case 'FileSpreadsheet':
+          return <FileSpreadsheet className="h-10 w-10" />
+        case 'FileCode':
+          return <FileCode className="h-10 w-10" />
+        case 'FileArchive':
+          return <FileArchive className="h-10 w-10" />
+        default:
+          return <File className="h-10 w-10" />
+      }
+    }
+
+    return (
+      <div className="flex items-center space-x-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+        {/* ファイルアイコン */}
+        <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
+          {getFileIcon(fileData.mimeType)}
+        </div>
+
+        {/* ファイル詳細 */}
+        <div className="min-w-0 flex-1">
+          <h4 className="truncate text-sm font-medium text-gray-900">
+            {fileData.originalName || fileData.filename}
+          </h4>
+          <div className="mt-1 flex items-center space-x-2 text-xs text-gray-500">
+            <span className="rounded bg-gray-100 px-2 py-0.5 font-medium">
+              {getFileTypeName(fileData.mimeType)}
+            </span>
+            {fileData.fileSize > 0 && (
+              <span>• {formatFileSize(fileData.fileSize)}</span>
+            )}
+            {fileData.uploadedAt && (
+              <span>
+                • {new Date(fileData.uploadedAt).toLocaleDateString('ja-JP')}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* ダウンロードボタン */}
+        <a
+          href={fileData.downloadUrl}
+          download={fileData.originalName || fileData.filename}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-shrink-0 items-center space-x-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 pointer-events-auto"
+        >
+          <Download className="h-4 w-4" />
+          <span>ダウンロード</span>
+        </a>
+      </div>
+    )
+  } catch {
+    // JSON パースに失敗した場合は、プレーンテキストとして表示
+    return (
+      <div className="text-gray-500 italic">
+        ファイルを表示できません: {content}
       </div>
     )
   }

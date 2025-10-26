@@ -229,6 +229,7 @@ export const BLOCK_TYPES = {
   QUOTE: 'quote',
   CODE: 'code',
   IMAGE: 'image',
+  FILE: 'file', // 新規追加: ファイルブロック
 } as const
 
 export type BlockType = (typeof BLOCK_TYPES)[keyof typeof BLOCK_TYPES]

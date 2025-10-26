@@ -23,6 +23,34 @@ var supportedImageTypes = map[string]bool{
 	"image/gif":  true,
 }
 
+// サポートするファイル形式（文書ファイル等）
+var supportedFileTypes = map[string]bool{
+	// PDF
+	"application/pdf": true,
+	// Microsoft Office (新形式)
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document":   true, // .docx
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         true, // .xlsx
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation": true, // .pptx
+	// Microsoft Office (旧形式)
+	"application/msword":            true, // .doc
+	"application/vnd.ms-excel":      true, // .xls
+	"application/vnd.ms-powerpoint": true, // .ppt
+	// テキストファイル
+	"text/plain": true, // .txt
+	// 圧縮ファイル
+	"application/zip":              true, // .zip
+	"application/x-rar-compressed": true, // .rar
+	"application/x-7z-compressed":  true, // .7z
+	"application/x-tar":            true, // .tar
+	"application/gzip":             true, // .gz
+	// その他
+	"application/json": true, // .json
+	"text/csv":         true, // .csv
+	"application/xml":  true, // .xml
+	"text/xml":         true, // .xml
+	"application/rtf":  true, // .rtf
+}
+
 // 最大ファイルサイズ (10MB)
 const maxFileSize = 10 << 20
 
@@ -42,10 +70,16 @@ type ErrorResponse struct {
 
 // UploadImageHandler 画像アップロードハンドラー
 func UploadImageHandler(w http.ResponseWriter, r *http.Request) {
-	// CORSヘッダー設定
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	// CORSヘッダー設定（修正: 認証情報を含むリクエストに対応）
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		origin = "http://localhost:5173" // デフォルトの開発環境オリジン
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", origin)
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Allow-Credentials", "true") // 認証情報（Cookie）を許可
 
 	// OPTIONSリクエストの処理
 	if r.Method == "OPTIONS" {
@@ -134,8 +168,117 @@ func UploadImageHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// UploadFileHandler ファイルアップロードハンドラー（PDF、Word、Excel等）
+func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
+	// CORSヘッダー設定（修正: 認証情報を含むリクエストに対応）
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		origin = "http://localhost:5173" // デフォルトの開発環境オリジン
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Allow-Credentials", "true") // 認証情報（Cookie）を許可
+
+	// OPTIONSリクエストの処理
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// POSTメソッドのみ許可
+	if r.Method != http.MethodPost {
+		sendErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed", "Only POST method is supported")
+		return
+	}
+
+	// multipart/form-dataの解析（最大32MB）
+	err := r.ParseMultipartForm(32 << 20)
+	if err != nil {
+		sendErrorResponse(w, http.StatusBadRequest, "Invalid form data", err.Error())
+		return
+	}
+
+	// ファイルの取得
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		sendErrorResponse(w, http.StatusBadRequest, "No file uploaded", "Please select a file to upload")
+		return
+	}
+	defer file.Close()
+
+	// ファイルサイズチェック
+	if handler.Size > maxFileSize {
+		sendErrorResponse(w, http.StatusBadRequest, "File too large", fmt.Sprintf("File size must be less than %d MB", maxFileSize>>20))
+		return
+	}
+
+	// MIMEタイプチェック
+	contentType := handler.Header.Get("Content-Type")
+
+	// Content-Typeが設定されていない場合はファイル拡張子で判定
+	if contentType == "" {
+		contentType = getFileMIMETypeFromExtension(handler.Filename)
+	}
+
+	if !isValidFileType(contentType) {
+		sendErrorResponse(w, http.StatusBadRequest, "Invalid file type", "Unsupported file type. Supported: PDF, Word, Excel, PowerPoint, text files, and archives")
+		return
+	}
+
+	// ファイル名の生成（重複回避のためタイムスタンプ付き）
+	filename := generateUniqueFilename(handler.Filename)
+
+	// uploads ディレクトリの作成
+	uploadDir := "./uploads"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		sendErrorResponse(w, http.StatusInternalServerError, "Failed to create upload directory", err.Error())
+		return
+	}
+
+	// ファイルの保存
+	filepath := filepath.Join(uploadDir, filename)
+	dst, err := os.Create(filepath)
+	if err != nil {
+		sendErrorResponse(w, http.StatusInternalServerError, "Failed to create file", err.Error())
+		return
+	}
+	defer dst.Close()
+
+	// ファイルの内容をコピー
+	_, err = io.Copy(dst, file)
+	if err != nil {
+		// 失敗した場合はファイルを削除
+		os.Remove(filepath)
+		sendErrorResponse(w, http.StatusInternalServerError, "Failed to save file", err.Error())
+		return
+	}
+
+	// 成功レスポンス
+	response := UploadResponse{
+		Success:  true,
+		Filename: filename,
+		URL:      fmt.Sprintf("/api/uploads/%s", filename),
+		Message:  "File uploaded successfully",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
 // ServeUploadsHandler 静的ファイル配信ハンドラー
 func ServeUploadsHandler(w http.ResponseWriter, r *http.Request) {
+	// CORSヘッダー設定（追加: 認証情報を含むリクエストに対応）
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		origin = "http://localhost:5173" // デフォルトの開発環境オリジン
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true") // 認証情報（Cookie）を許可
+
 	// パラメータからファイル名を取得
 	vars := mux.Vars(r)
 	filename := vars["filename"]
@@ -166,6 +309,11 @@ func isValidImageType(contentType string) bool {
 	return supportedImageTypes[strings.ToLower(contentType)]
 }
 
+// ファイルタイプの検証（文書ファイル等）
+func isValidFileType(contentType string) bool {
+	return supportedFileTypes[strings.ToLower(contentType)]
+}
+
 // ファイル拡張子からMIMEタイプを取得
 func getMIMETypeFromExtension(filename string) string {
 	ext := strings.ToLower(filepath.Ext(filename))
@@ -179,6 +327,56 @@ func getMIMETypeFromExtension(filename string) string {
 		return "image/webp"
 	case ".gif":
 		return "image/gif"
+	default:
+		return ""
+	}
+}
+
+// ファイル拡張子からMIMEタイプを取得（文書ファイル等）
+func getFileMIMETypeFromExtension(filename string) string {
+	ext := strings.ToLower(filepath.Ext(filename))
+
+	switch ext {
+	// PDF
+	case ".pdf":
+		return "application/pdf"
+	// Microsoft Office (新形式)
+	case ".docx":
+		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	case ".xlsx":
+		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	case ".pptx":
+		return "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+	// Microsoft Office (旧形式)
+	case ".doc":
+		return "application/msword"
+	case ".xls":
+		return "application/vnd.ms-excel"
+	case ".ppt":
+		return "application/vnd.ms-powerpoint"
+	// テキストファイル
+	case ".txt":
+		return "text/plain"
+	// 圧縮ファイル
+	case ".zip":
+		return "application/zip"
+	case ".rar":
+		return "application/x-rar-compressed"
+	case ".7z":
+		return "application/x-7z-compressed"
+	case ".tar":
+		return "application/x-tar"
+	case ".gz":
+		return "application/gzip"
+	// その他
+	case ".json":
+		return "application/json"
+	case ".csv":
+		return "text/csv"
+	case ".xml":
+		return "application/xml"
+	case ".rtf":
+		return "application/rtf"
 	default:
 		return ""
 	}

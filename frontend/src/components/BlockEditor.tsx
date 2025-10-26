@@ -3,8 +3,9 @@ import { Input } from '@/components/ui/input'
 import { Trash2, GripVertical, Plus } from 'lucide-react'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { ImageBlockEditor } from '@/components/ImageBlockEditor'
+import { FileBlockEditor } from '@/components/FileBlockEditor'
 import { useBlockEditor } from '@/hooks/useBlockEditor'
-import type { Block, ImageBlockContent } from '@/types'
+import type { Block, ImageBlockContent, FileBlockContent } from '@/types'
 import { BLOCK_TYPES } from '@/utils/blockUtils'
 
 interface BlockEditorProps {
@@ -29,6 +30,7 @@ const BLOCK_TYPE_LABELS = {
   [BLOCK_TYPES.QUOTE]: 'Quote',
   [BLOCK_TYPES.CODE]: 'Code',
   [BLOCK_TYPES.IMAGE]: 'Image',
+  [BLOCK_TYPES.FILE]: 'File', // ファイルブロック追加
 }
 
 /**
@@ -80,6 +82,11 @@ export function BlockEditor({
     handleContentChange(JSON.stringify(imageContent))
   }
 
+  // ファイルブロック用のコンテンツ更新処理
+  const handleFileContentChange = (fileContent: FileBlockContent) => {
+    handleContentChange(JSON.stringify(fileContent))
+  }
+
   // 画像ブロックのコンテンツを取得
   const getImageContent = (): ImageBlockContent | undefined => {
     if (block.type !== BLOCK_TYPES.IMAGE) return undefined
@@ -95,6 +102,24 @@ export function BlockEditor({
         height: 0,
         originalName: '',
         fileSize: 0,
+      }
+    }
+  }
+
+  // ファイルブロックのコンテンツを取得
+  const getFileContent = (): FileBlockContent | undefined => {
+    if (block.type !== BLOCK_TYPES.FILE) return undefined
+
+    try {
+      return JSON.parse(block.content) as FileBlockContent
+    } catch {
+      return {
+        filename: '',
+        fileSize: 0,
+        mimeType: '',
+        uploadedAt: '',
+        downloadUrl: '',
+        originalName: '',
       }
     }
   }
@@ -182,6 +207,13 @@ export function BlockEditor({
                 onContentChange={handleImageContentChange}
                 placeholder={placeholder}
                 className="min-h-[2rem] w-full"
+              />
+            </div>
+          ) : block.type === BLOCK_TYPES.FILE ? (
+            <div className="w-full" onClick={() => onFocus(block.id)}>
+              <FileBlockEditor
+                initialContent={getFileContent()}
+                onContentChange={handleFileContentChange}
               />
             </div>
           ) : (
