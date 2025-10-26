@@ -8,7 +8,16 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(path.dirname(fileURLToPath(import.meta.url)), "./src"),
+      '@': path.resolve(path.dirname(fileURLToPath(import.meta.url)), './src'),
+    },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/tests/setup.ts',
+    // パスエイリアスをテスト環境でも有効にする
+    alias: {
+      '@': path.resolve(__dirname, './src'),
     },
   },
   server: {

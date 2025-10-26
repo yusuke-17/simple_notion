@@ -11,6 +11,7 @@ export default defineConfig({
     css: true,
     typecheck: {
       include: ['**/*.{test,spec}.{ts,tsx}'],
+      tsconfig: './tsconfig.test.json', // テスト用のTypeScript設定を明示的に指定
     },
     exclude: ['**/node_modules/**', '**/tests/e2e/**'],
     env: {
