@@ -9,6 +9,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/tests/setup.ts'],
     css: true,
+    typecheck: {
+      include: ['**/*.{test,spec}.{ts,tsx}'],
+    },
     exclude: ['**/node_modules/**', '**/tests/e2e/**'],
     env: {
       VITE_API_BASE_URL: '',
@@ -27,7 +30,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
     },
   },
 })

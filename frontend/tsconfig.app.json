@@ -6,6 +6,10 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "types": ["@testing-library/jest-dom", "vitest/globals"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -29,5 +33,15 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**",
+    "coverage",
+    "tmp",
+    "uploads"
+  ]
 }
