@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:ci": "vite --host 0.0.0.0 --port 0",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",

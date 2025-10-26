@@ -9,7 +9,7 @@
     "skipDefaultLibCheck": true,
     "incremental": true,
     "isolatedModules": true,
-    "types": ["@testing-library/jest-dom", "vitest/globals"],
+    "types": ["vite/client"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",
