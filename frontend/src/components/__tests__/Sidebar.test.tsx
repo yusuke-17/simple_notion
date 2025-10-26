@@ -508,9 +508,13 @@ describe('Sidebar Component', () => {
       expect(screen.getByText('First Document')).toBeInTheDocument()
     })
 
-    // document-updatedイベントを発生させる
-    const event = new CustomEvent('document-updated')
-    window.dispatchEvent(event)
+    // document-updatedイベントを発生させる（act()でラップ）
+    await waitFor(async () => {
+      const event = new CustomEvent('document-updated')
+      window.dispatchEvent(event)
+      // イベント処理の完了を待つ
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
 
     // リストが更新されることを確認
     await waitFor(() => {
@@ -537,11 +541,15 @@ describe('Sidebar Component', () => {
       expect(screen.getByText('Second Document')).toBeInTheDocument()
     })
 
-    // document-deletedイベントを発生させる
-    const event = new CustomEvent('document-deleted', {
-      detail: { documentId: 2 },
+    // document-deletedイベントを発生させる（act()でラップ）
+    await waitFor(async () => {
+      const event = new CustomEvent('document-deleted', {
+        detail: { documentId: 2 },
+      })
+      window.dispatchEvent(event)
+      // イベント処理の完了を待つ
+      await new Promise(resolve => setTimeout(resolve, 0))
     })
-    window.dispatchEvent(event)
 
     // リストが更新されることを確認
     await waitFor(() => {

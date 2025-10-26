@@ -39,6 +39,8 @@ describe('useReadOnlyDocumentViewer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // console.errorをモック化してエラーログを抑制
+    vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {

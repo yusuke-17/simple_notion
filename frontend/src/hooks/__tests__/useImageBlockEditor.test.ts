@@ -215,7 +215,7 @@ describe('useImageBlockEditor', () => {
     expect(result.current.uploadState.error).toBe(null)
   })
 
-  test('ドラッグ&ドロップイベント処理', () => {
+  test('ドラッグ&ドロップイベント処理', async () => {
     const { result } = renderHook(() =>
       useImageBlockEditor(undefined, mockOnContentChange)
     )
@@ -228,8 +228,8 @@ describe('useImageBlockEditor', () => {
       },
     } as unknown as React.DragEvent
 
-    act(() => {
-      result.current.handleFileDrop(mockEvent)
+    await act(async () => {
+      await result.current.handleFileDrop(mockEvent)
     })
 
     expect(mockEvent.preventDefault).toHaveBeenCalled()

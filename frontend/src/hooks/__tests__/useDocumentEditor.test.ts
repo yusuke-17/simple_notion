@@ -72,13 +72,19 @@ describe('useDocumentEditor', () => {
     } as Response)
   })
 
-  it('初期状態が正しく設定される', () => {
+  it('初期状態が正しく設定される', async () => {
     const { result } = renderHook(() => useDocumentEditor(documentId))
 
+    // 初期状態の確認
     expect(result.current.isLoading).toBe(true)
     expect(result.current.error).toBe(null)
     expect(result.current.title).toBe('')
     expect(result.current.document).toBe(null)
+
+    // 非同期処理の完了を待つ
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
   })
 
   it('文書を正常に読み込める', async () => {
@@ -111,8 +117,13 @@ describe('useDocumentEditor', () => {
     consoleSpy.mockRestore()
   })
 
-  it('タイトルを更新できる', () => {
+  it('タイトルを更新できる', async () => {
     const { result } = renderHook(() => useDocumentEditor(documentId))
+
+    // 初期読み込み完了を待つ
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
 
     act(() => {
       result.current.updateTitle('New Title')
@@ -130,11 +141,14 @@ describe('useDocumentEditor', () => {
     })
 
     // リロード実行
-    act(() => {
-      result.current.reloadDocument()
+    await act(async () => {
+      await result.current.reloadDocument()
     })
 
-    expect(mockFetch).toHaveBeenCalledTimes(2) // 初回 + リロード
+    // 読み込み完了を待つ
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(2) // 初回 + リロード
+    })
   })
 
   it('文書を元の状態にリセットできる', async () => {
@@ -197,13 +211,16 @@ describe('useDocumentEditor', () => {
     expect(typeof result.current.isSaving).toBe('boolean')
   })
 
-  it('useBlockManagerが正しいパラメータで呼ばれる', () => {
+  it('useBlockManagerが正しいパラメータで呼ばれる', async () => {
     renderHook(() => useDocumentEditor(documentId))
 
-    expect(useBlockManagerModule.useBlockManager).toHaveBeenCalledWith(
-      [],
-      documentId
-    )
+    // 初回読み込み完了を待つ
+    await waitFor(() => {
+      expect(useBlockManagerModule.useBlockManager).toHaveBeenCalledWith(
+        [],
+        documentId
+      )
+    })
   })
 
   it('useAutoSaveが正しいパラメータで呼ばれる', async () => {
