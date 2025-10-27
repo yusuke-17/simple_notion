@@ -20,8 +20,8 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
-# tmpディレクトリを作成し権限を設定
-RUN mkdir -p tmp && chown -R appuser:appuser /app
+# tmpとuploadsディレクトリを作成し権限を設定
+RUN mkdir -p tmp uploads && chown -R appuser:appuser /app
 
 # non-rootユーザーに切り替え
 USER appuser

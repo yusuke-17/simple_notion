@@ -29,3 +29,7 @@ Thumbs.db
 # 一時ファイル
 tmp/
 temp/
+
+# アップロードされたファイル（.gitkeepは除外しない）
+uploads/*
+!uploads/.gitkeep
