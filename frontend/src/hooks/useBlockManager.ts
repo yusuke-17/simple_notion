@@ -104,15 +104,34 @@ export const useBlockManager = (initialBlocks: Block[], documentId: number) => {
   }, [])
 
   /**
+   * Normalize block content from server response
+   * Convert object content to string for consistency
+   */
+  const normalizeBlockContent = (block: Block): Block => {
+    // 画像とファイルブロックのcontentがオブジェクトの場合は文字列化
+    if (
+      (block.type === 'image' || block.type === 'file') &&
+      typeof block.content === 'object' &&
+      block.content !== null
+    ) {
+      return {
+        ...block,
+        content: JSON.stringify(block.content),
+      }
+    }
+    return block
+  }
+
+  /**
    * Initialize blocks from server data
    */
   const initializeBlocks = useCallback(
     (serverBlocks: Block[]) => {
       if (serverBlocks && serverBlocks.length > 0) {
-        // Sort blocks by position
-        const sortedBlocks = serverBlocks.sort(
-          (a, b) => a.position - b.position
-        )
+        // Sort blocks by position and normalize content
+        const sortedBlocks = serverBlocks
+          .sort((a, b) => a.position - b.position)
+          .map(normalizeBlockContent)
         setBlocks(sortedBlocks)
       } else {
         // Auto-create first block for immediate typing
@@ -130,9 +149,9 @@ export const useBlockManager = (initialBlocks: Block[], documentId: number) => {
   const syncWithServer = useCallback(
     (serverBlocks: Block[]) => {
       if (serverBlocks && serverBlocks.length > 0) {
-        const sortedBlocks = serverBlocks.sort(
-          (a, b) => a.position - b.position
-        )
+        const sortedBlocks = serverBlocks
+          .sort((a, b) => a.position - b.position)
+          .map(normalizeBlockContent)
 
         // refを使用して現在のblocksと比較（無限ループを回避）
         const currentBlocks = blocksRef.current

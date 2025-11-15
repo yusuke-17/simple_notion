@@ -1,6 +1,10 @@
 import { Input } from '@/components/ui/input'
 import { ReadOnlyRichTextViewer } from './ReadOnlyRichTextViewer'
-import type { ReadOnlyDocumentViewerProps, FileBlockContent } from '@/types'
+import type {
+  ReadOnlyDocumentViewerProps,
+  FileBlockContent,
+  ImageBlockContent,
+} from '@/types'
 import { useReadOnlyDocumentViewer } from '@/hooks/useReadOnlyDocumentViewer'
 import {
   Download,
@@ -96,14 +100,24 @@ export function ReadOnlyDocumentViewer({
                   <div className="min-h-[2rem] p-2 rounded border border-transparent">
                     {block.type === 'image' ? (
                       /* 画像ブロックの読み取り専用表示 */
-                      <ReadOnlyImageBlock content={block.content} />
+                      <ReadOnlyImageBlock
+                        content={block.content as string | ImageBlockContent}
+                      />
                     ) : block.type === 'file' ? (
                       /* ファイルブロックの読み取り専用表示 */
-                      <ReadOnlyFileBlock content={block.content} />
+                      <ReadOnlyFileBlock
+                        content={block.content as string | FileBlockContent}
+                      />
                     ) : (
                       /* テキストブロックの読み取り専用表示 */
                       <div data-testid={`readonly-block-content-${block.id}`}>
-                        <ReadOnlyRichTextViewer content={block.content || ''} />
+                        <ReadOnlyRichTextViewer
+                          content={
+                            typeof block.content === 'string'
+                              ? block.content
+                              : ''
+                          }
+                        />
                       </div>
                     )}
                   </div>
@@ -125,9 +139,15 @@ export function ReadOnlyDocumentViewer({
 /**
  * 画像ブロックの読み取り専用表示コンポーネント
  */
-function ReadOnlyImageBlock({ content }: { content: string }) {
+function ReadOnlyImageBlock({
+  content,
+}: {
+  content: string | ImageBlockContent
+}) {
   try {
-    const imageData = JSON.parse(content)
+    // contentが既にオブジェクトの場合はそのまま使用
+    const imageData =
+      typeof content === 'string' ? JSON.parse(content) : content
 
     return (
       <div className="flex flex-col items-start space-y-2">
@@ -149,7 +169,7 @@ function ReadOnlyImageBlock({ content }: { content: string }) {
     // JSON パースに失敗した場合は、プレーンテキストとして表示
     return (
       <div className="text-gray-500 italic">
-        画像を表示できません: {content}
+        画像を表示できません: {String(content)}
       </div>
     )
   }
@@ -158,9 +178,15 @@ function ReadOnlyImageBlock({ content }: { content: string }) {
 /**
  * ファイルブロックの読み取り専用表示コンポーネント
  */
-function ReadOnlyFileBlock({ content }: { content: string }) {
+function ReadOnlyFileBlock({
+  content,
+}: {
+  content: string | FileBlockContent
+}) {
   try {
-    const fileData: FileBlockContent = JSON.parse(content)
+    // contentが既にオブジェクトの場合はそのまま使用
+    const fileData: FileBlockContent =
+      typeof content === 'string' ? JSON.parse(content) : content
 
     // ファイルアイコンを取得
     const getFileIcon = (mimeType: string) => {
@@ -224,7 +250,7 @@ function ReadOnlyFileBlock({ content }: { content: string }) {
     // JSON パースに失敗した場合は、プレーンテキストとして表示
     return (
       <div className="text-gray-500 italic">
-        ファイルを表示できません: {content}
+        ファイルを表示できません: {String(content)}
       </div>
     )
   }

@@ -92,6 +92,11 @@ export function BlockEditor({
     if (block.type !== BLOCK_TYPES.IMAGE) return undefined
 
     try {
+      // contentが既にオブジェクトの場合はそのまま返す（バックエンドからの直接のレスポンス）
+      if (typeof block.content === 'object' && block.content !== null) {
+        return block.content as ImageBlockContent
+      }
+      // contentが文字列の場合はパースする
       return JSON.parse(block.content) as ImageBlockContent
     } catch {
       return {
@@ -111,6 +116,11 @@ export function BlockEditor({
     if (block.type !== BLOCK_TYPES.FILE) return undefined
 
     try {
+      // contentが既にオブジェクトの場合はそのまま返す（バックエンドからの直接のレスポンス）
+      if (typeof block.content === 'object' && block.content !== null) {
+        return block.content as FileBlockContent
+      }
+      // contentが文字列の場合はパースする
       return JSON.parse(block.content) as FileBlockContent
     } catch {
       return {
@@ -182,7 +192,7 @@ export function BlockEditor({
           block.type === BLOCK_TYPES.HEADING3 ? (
             <Input
               ref={inputRef}
-              value={block.content}
+              value={typeof block.content === 'string' ? block.content : ''}
               onChange={e => handleContentChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={handleFocus}
@@ -192,7 +202,7 @@ export function BlockEditor({
           ) : block.type === BLOCK_TYPES.TEXT ? (
             <div className="w-full">
               <RichTextEditor
-                content={block.content}
+                content={typeof block.content === 'string' ? block.content : ''}
                 placeholder={placeholder}
                 onUpdate={handleContentChange}
                 onFocus={handleFocus}
@@ -219,7 +229,7 @@ export function BlockEditor({
           ) : (
             <textarea
               ref={textareaRef}
-              value={block.content}
+              value={typeof block.content === 'string' ? block.content : ''}
               onChange={e => handleContentChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={handleFocus}

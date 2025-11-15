@@ -28,7 +28,7 @@ export interface Document {
 export interface Block {
   id: number
   type: string
-  content: string
+  content: string | ImageBlockContent | FileBlockContent // Allow object types for image/file blocks
   documentId: number
   position: number // Changed from 'order' to match backend
   createdAt: string

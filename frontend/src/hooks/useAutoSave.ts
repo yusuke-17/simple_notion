@@ -34,6 +34,12 @@ export const useAutoSave = (
       isSavingRef.current = true
 
       const payload = prepareDocumentUpdatePayload(title, blocks, documentId)
+
+      // デバッグ: ペイロードを出力
+      if (import.meta.env.DEV) {
+        console.log('[DEBUG] Save payload:', JSON.stringify(payload, null, 2))
+      }
+
       const options = createDocumentRequestOptions('PUT', payload)
 
       const response = await fetch(getDocumentApiEndpoint(documentId), options)

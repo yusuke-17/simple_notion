@@ -2,7 +2,6 @@ package repository
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"simple-notion-backend/internal/models"
@@ -43,17 +42,11 @@ func (r *BlockRepository) GetBlocksByDocumentID(docID int) ([]models.Block, erro
 	var blocks []models.Block
 	for rows.Next() {
 		var block models.Block
-		var contentJSON []byte
 
 		err := rows.Scan(&block.ID, &block.DocumentID, &block.Type,
-			&contentJSON, &block.Position, &block.CreatedAt)
+			&block.Content, &block.Position, &block.CreatedAt)
 		if err != nil {
 			return nil, err
-		}
-
-		// JSONをinterface{}型にデシリアライズ
-		if err := json.Unmarshal(contentJSON, &block.Content); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal block content: %w", err)
 		}
 
 		blocks = append(blocks, block)
@@ -89,12 +82,8 @@ func (r *BlockRepository) UpdateBlocks(docID int, blocks []models.Block) error {
 	}
 
 	for _, block := range blocks {
-		contentJSON, err := json.Marshal(block.Content)
-		if err != nil {
-			return fmt.Errorf("failed to marshal block content: %w", err)
-		}
-
-		_, err = tx.Exec(insertQuery, docID, block.Type, contentJSON, block.Position)
+		// json.RawMessageをそのままバイト列として使用
+		_, err = tx.Exec(insertQuery, docID, block.Type, block.Content, block.Position)
 		if err != nil {
 			return fmt.Errorf("failed to insert block: %w", err)
 		}
@@ -106,17 +95,13 @@ func (r *BlockRepository) UpdateBlocks(docID int, blocks []models.Block) error {
 
 // CreateBlock - 単一ブロックを作成
 func (r *BlockRepository) CreateBlock(block *models.Block) error {
-	contentJSON, err := json.Marshal(block.Content)
-	if err != nil {
-		return fmt.Errorf("failed to marshal block content: %w", err)
-	}
-
+	// json.RawMessageをそのままバイト列として使用
 	insertQuery, err := r.queries.Get("BulkInsertBlocks")
 	if err != nil {
 		return err
 	}
 
-	_, err = r.db.Exec(insertQuery, block.DocumentID, block.Type, contentJSON, block.Position)
+	_, err = r.db.Exec(insertQuery, block.DocumentID, block.Type, block.Content, block.Position)
 	return err
 }
 

@@ -32,6 +32,15 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// デバッグ: ブロック情報をログ出力
+	fmt.Printf("[DEBUG] UpdateDocument: docID=%d, title=%s, blocks count=%d\n", docID, req.Title, len(req.Blocks))
+	for i, block := range req.Blocks {
+		fmt.Printf("[DEBUG] Block %d: id=%d, type=%s, content length=%d\n", i, block.ID, block.Type, len(block.Content))
+		if block.Type == "image" || block.Type == "file" {
+			fmt.Printf("[DEBUG] Block %d content: %s\n", i, string(block.Content))
+		}
+	}
+
 	// 該当する場合はリッチテキストJSONを検証
 	if err := ValidateRichTextJSON(req.Content); err != nil {
 		http.Error(w, "Invalid rich text content", http.StatusBadRequest)
@@ -39,12 +48,18 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 	}
 
 	// ブロックコンテンツのリッチテキスト形式を検証
+	// ただし、image と file ブロックは除外（これらは独自のJSONフォーマットを持つ）
 	for i, block := range req.Blocks {
-		if content, ok := block.Content.(string); ok {
-			if err := ValidateRichTextJSON(content); err != nil {
-				http.Error(w, fmt.Sprintf("Invalid rich text content in block %d", i), http.StatusBadRequest)
-				return
-			}
+		// 画像とファイルブロックはリッチテキストではないのでスキップ
+		if block.Type == "image" || block.Type == "file" {
+			continue
+		}
+
+		// json.RawMessageは[]byte型なので、string()で変換
+		contentStr := string(block.Content)
+		if err := ValidateRichTextJSON(contentStr); err != nil {
+			http.Error(w, fmt.Sprintf("Invalid rich text content in block %d", i), http.StatusBadRequest)
+			return
 		}
 	}
 

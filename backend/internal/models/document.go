@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Document struct {
 	ID        int       `json:"id" db:"id"`
@@ -27,10 +30,10 @@ type DocumentWithBlocks struct {
 }
 
 type Block struct {
-	ID         int         `json:"id" db:"id"`
-	DocumentID int         `json:"document_id" db:"document_id"`
-	Type       string      `json:"type" db:"type"`
-	Content    interface{} `json:"content" db:"content"`
-	Position   int         `json:"position" db:"position"`
-	CreatedAt  time.Time   `json:"created_at" db:"created_at"`
+	ID         int             `json:"id" db:"id"`
+	DocumentID int             `json:"document_id" db:"document_id"`
+	Type       string          `json:"type" db:"type"`
+	Content    json.RawMessage `json:"content" db:"content"`
+	Position   int             `json:"position" db:"position"`
+	CreatedAt  time.Time       `json:"created_at" db:"created_at"`
 }

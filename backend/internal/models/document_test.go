@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -80,10 +81,8 @@ func TestDocument(t *testing.T) {
 func TestBlock(t *testing.T) {
 	t.Run("Block struct creation", func(t *testing.T) {
 		now := time.Now()
-		content := map[string]interface{}{
-			"text":  "Hello, World!",
-			"style": "bold",
-		}
+		// JSONコンテンツをRawMessageとして作成
+		content := json.RawMessage(`{"text":"Hello, World!","style":"bold"}`)
 
 		block := Block{
 			ID:         1,
@@ -107,10 +106,10 @@ func TestBlock(t *testing.T) {
 			t.Errorf("Expected Position to be 0, got %d", block.Position)
 		}
 
-		// Content validation
-		contentMap, ok := block.Content.(map[string]interface{})
-		if !ok {
-			t.Errorf("Expected Content to be a map[string]interface{}")
+		// Content validation - RawMessageをパースして確認
+		var contentMap map[string]interface{}
+		if err := json.Unmarshal(block.Content, &contentMap); err != nil {
+			t.Errorf("Failed to unmarshal Content: %v", err)
 		} else {
 			if contentMap["text"] != "Hello, World!" {
 				t.Errorf("Expected Content text to be 'Hello, World!', got %v", contentMap["text"])
@@ -220,7 +219,7 @@ func TestDocumentWithBlocks(t *testing.T) {
 				ID:         1,
 				DocumentID: 1,
 				Type:       "text",
-				Content:    map[string]interface{}{"text": "First block"},
+				Content:    json.RawMessage(`{"text":"First block"}`),
 				Position:   0,
 				CreatedAt:  now,
 			},
@@ -228,7 +227,7 @@ func TestDocumentWithBlocks(t *testing.T) {
 				ID:         2,
 				DocumentID: 1,
 				Type:       "heading",
-				Content:    map[string]interface{}{"text": "Heading", "level": 1},
+				Content:    json.RawMessage(`{"text":"Heading","level":1}`),
 				Position:   1,
 				CreatedAt:  now,
 			},

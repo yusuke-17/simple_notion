@@ -5,6 +5,13 @@ import type { Block } from '@/types'
  */
 
 /**
+ * Normalize block content to string for consistent comparison
+ */
+const normalizeBlockContent = (content: Block['content']): string => {
+  return typeof content === 'string' ? content : JSON.stringify(content)
+}
+
+/**
  * Check if document content has changed from original
  */
 export const hasDocumentChanged = (
@@ -14,8 +21,20 @@ export const hasDocumentChanged = (
   originalBlocks: Block[]
 ): boolean => {
   const titleChanged = currentTitle !== originalTitle
+
+  // Normalize content for accurate comparison
+  const normalizedCurrent = currentBlocks.map(block => ({
+    ...block,
+    content: normalizeBlockContent(block.content),
+  }))
+
+  const normalizedOriginal = originalBlocks.map(block => ({
+    ...block,
+    content: normalizeBlockContent(block.content),
+  }))
+
   const blocksChanged =
-    JSON.stringify(currentBlocks) !== JSON.stringify(originalBlocks)
+    JSON.stringify(normalizedCurrent) !== JSON.stringify(normalizedOriginal)
 
   return titleChanged || blocksChanged
 }
@@ -29,15 +48,40 @@ export const prepareDocumentUpdatePayload = (
   documentId: number
 ) => {
   // Prepare blocks with proper order and document ID
-  const orderedBlocks = blocks.map((block, index) => ({
-    ...block,
-    position: index,
-    documentId: documentId,
-  }))
+  const orderedBlocks = blocks.map((block, index) => {
+    // contentが既にオブジェクトの場合は文字列化する
+    const content =
+      typeof block.content === 'string'
+        ? block.content
+        : JSON.stringify(block.content)
+
+    return {
+      ...block,
+      content,
+      position: index,
+      documentId: documentId,
+    }
+  })
+
+  // Legacy content field: テキストブロックのcontentのみを結合
+  // 画像やファイルブロックは除外
+  const textBlocks = blocks.filter(
+    block => block.type !== 'image' && block.type !== 'file'
+  )
+  const legacyContent =
+    textBlocks.length > 0
+      ? textBlocks
+          .map(block =>
+            typeof block.content === 'string'
+              ? block.content
+              : JSON.stringify(block.content)
+          )
+          .join('\n')
+      : '' // 空の場合は空文字列
 
   return {
     title: title || 'Untitled',
-    content: blocks.map(block => block.content).join('\n'), // Legacy content field
+    content: legacyContent,
     blocks: orderedBlocks,
   }
 }

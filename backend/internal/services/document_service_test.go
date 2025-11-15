@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -130,14 +131,17 @@ func TestDocumentModels(t *testing.T) {
 		}
 	})
 
-	t.Run("Blockモデルの作成テスト", func(t *testing.T) {
+	t.Run("Blockモデルのテスト", func(t *testing.T) {
 		now := time.Now()
+
+		// JSONコンテンツをRawMessageとして作成
+		contentJSON := json.RawMessage(`{"text":"テストブロック"}`)
 
 		block := models.Block{
 			ID:         1,
 			DocumentID: 10,
 			Type:       "paragraph",
-			Content:    map[string]interface{}{"text": "テストブロック"},
+			Content:    contentJSON,
 			Position:   0,
 			CreatedAt:  now,
 		}
@@ -166,7 +170,7 @@ func TestDocumentModels(t *testing.T) {
 				ID:         1,
 				DocumentID: 1,
 				Type:       "paragraph",
-				Content:    map[string]interface{}{"text": "ブロック1"},
+				Content:    json.RawMessage(`{"text":"ブロック1"}`),
 				Position:   0,
 				CreatedAt:  now,
 			},
