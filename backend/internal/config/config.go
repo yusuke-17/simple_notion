@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 type Config struct {
 	DatabaseURL    string
@@ -10,6 +13,15 @@ type Config struct {
 	CookieSecure   bool   // HTTPSが必要かどうか
 	CookieSameSite string // "strict", "lax", "none"
 	CookieDomain   string // Cookie のドメイン
+
+	// MinIO/S3 設定
+	S3Endpoint      string
+	S3AccessKey     string
+	S3SecretKey     string
+	S3BucketName    string
+	S3Region        string
+	S3UseSSL        bool
+	S3PresignExpiry int // 署名付きURLの有効期限（秒）
 }
 
 func Load() *Config {
@@ -21,6 +33,15 @@ func Load() *Config {
 		Port:         getEnv("PORT", "8080"),
 		Environment:  env,
 		CookieDomain: getEnv("COOKIE_DOMAIN", ""),
+
+		// MinIO/S3 設定
+		S3Endpoint:      getEnv("S3_ENDPOINT", "minio:9000"),
+		S3AccessKey:     getEnv("S3_ACCESS_KEY", "minioadmin"),
+		S3SecretKey:     getEnv("S3_SECRET_KEY", "minioadmin"),
+		S3BucketName:    getEnv("S3_BUCKET_NAME", "simple-notion-files"),
+		S3Region:        getEnv("S3_REGION", "us-east-1"),
+		S3UseSSL:        getBoolEnv("S3_USE_SSL", false),
+		S3PresignExpiry: getIntEnv("S3_PRESIGN_EXPIRY", 86400), // デフォルト24時間
 	}
 
 	// 環境に応じたセキュリティ設定
@@ -48,4 +69,16 @@ func getBoolEnv(key string, defaultValue bool) bool {
 		return defaultValue
 	}
 	return value == "true" || value == "1" || value == "yes"
+}
+
+func getIntEnv(key string, defaultValue int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		return defaultValue
+	}
+	return intValue
 }
