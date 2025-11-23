@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+
+# PATHを明示的に設定（nodeコマンドを使えるようにする）
+export PATH="$HOME/.nvm/versions/node/$(nvm version)/bin:$HOME/.nodenv/shims:$HOME/.volta/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
 # Simple Notion pre-commit hook with lint-staged
 echo "🔍 Running lint-staged pre-commit checks..."
