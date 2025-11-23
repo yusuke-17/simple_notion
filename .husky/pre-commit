@@ -1,7 +1,12 @@
 #!/usr/bin/env sh
 
-# PATHを明示的に設定（nodeコマンドを使えるようにする）
-export PATH="$HOME/.nvm/versions/node/$(nvm version)/bin:$HOME/.nodenv/shims:$HOME/.volta/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+# nvmを初期化
+if [ -s "$HOME/.nvm/nvm.sh" ]; then
+    . "$HOME/.nvm/nvm.sh"
+fi
+
+# PATHを明示的に設定(nodeコマンドを使えるようにする)
+export PATH="$HOME/.nvm/versions/node/v25.2.1/bin:$HOME/.nodenv/shims:$HOME/.volta/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
 # Simple Notion pre-commit hook with lint-staged
 echo "🔍 Running lint-staged pre-commit checks..."
