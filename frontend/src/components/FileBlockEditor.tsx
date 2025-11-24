@@ -11,8 +11,10 @@ import {
   Download,
   Trash2,
   AlertCircle,
+  XCircle,
 } from 'lucide-react'
 import { getFileIconName } from '@/utils/fileUploadUtils'
+import { formatBytes, formatSpeed } from '@/utils/uploadUtils'
 
 interface FileBlockEditorProps {
   initialContent?: FileBlockContent
@@ -43,6 +45,7 @@ export function FileBlockEditor({
     isReady,
     fileTypeName,
     formattedFileSize,
+    cancelUpload,
   } = useFileBlockEditor(initialContent, onContentChange)
 
   // ファイルアイコンを取得
@@ -80,14 +83,49 @@ export function FileBlockEditor({
               <div className="w-full max-w-xs">
                 <div className="mb-2 flex items-center justify-between text-sm text-gray-600">
                   <span>アップロード中...</span>
-                  <span>{uploadProgress}%</span>
+                  {uploadProgress && (
+                    <span>{uploadProgress.percentage.toFixed(1)}%</span>
+                  )}
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className="h-full bg-blue-500 transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
+                {uploadProgress && (
+                  <>
+                    {/* 進捗バー */}
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                      <div
+                        className="h-full bg-blue-500 transition-all duration-300"
+                        style={{ width: `${uploadProgress.percentage}%` }}
+                      />
+                    </div>
+                    {/* ファイルサイズ */}
+                    <div className="mt-2 flex justify-between text-xs text-gray-500">
+                      <span>
+                        {formatBytes(uploadProgress.loaded)} /{' '}
+                        {formatBytes(uploadProgress.total)}
+                      </span>
+                    </div>
+                    {/* 速度と残り時間 */}
+                    {uploadProgress.speed > 0 && (
+                      <div className="mt-1 flex justify-between text-xs text-gray-400">
+                        <span>{formatSpeed(uploadProgress.speed)}</span>
+                        <span>{uploadProgress.estimatedTimeRemaining}</span>
+                      </div>
+                    )}
+                    {/* キャンセルボタン */}
+                    <Button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation()
+                        cancelUpload()
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="mt-3 w-full text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      <XCircle className="mr-2 h-4 w-4" />
+                      キャンセル
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           ) : (

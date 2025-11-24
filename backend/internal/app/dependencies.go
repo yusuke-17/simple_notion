@@ -115,6 +115,7 @@ func (d *Dependencies) initServices() error {
 		d.Config.S3BucketName,
 		d.Config.S3Region,
 		d.Config.S3UseSSL,
+		d.Config.S3ExternalEndpoint,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create s3 client: %w", err)

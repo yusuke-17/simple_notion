@@ -1,8 +1,8 @@
 import React from 'react'
-import { Upload, X, ImageIcon, AlertCircle } from 'lucide-react'
+import { Upload, X, ImageIcon, AlertCircle, XCircle } from 'lucide-react'
 import { useImageBlockEditor } from '@/hooks/useImageBlockEditor'
 import type { ImageBlockContent } from '@/types'
-import { formatBytes } from '@/utils/uploadUtils'
+import { formatBytes, formatSpeed } from '@/utils/uploadUtils'
 
 interface ImageBlockEditorProps {
   initialContent?: ImageBlockContent
@@ -34,9 +34,10 @@ export const ImageBlockEditor: React.FC<ImageBlockEditorProps> = ({
     updateAlt,
     removeImage,
     clearError,
+    cancelUpload,
   } = useImageBlockEditor(initialContent, onContentChange)
 
-  const { isUploading, error, previewUrl } = uploadState
+  const { isUploading, error, previewUrl, progress } = uploadState
 
   // アップロード中またはプレビュー表示中
   const showUploadArea = !hasImage || isUploading
@@ -80,10 +81,42 @@ export const ImageBlockEditor: React.FC<ImageBlockEditorProps> = ({
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
               <p className="text-sm text-blue-600">アップロード中...</p>
-              {uploadState.progress && (
-                <p className="text-xs text-gray-500">
-                  {uploadState.progress.filename} ({formatBytes(0)})
-                </p>
+              {progress && (
+                <div className="space-y-2">
+                  {/* 進捗バー */}
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${progress.percentage}%` }}
+                    />
+                  </div>
+                  {/* 進捗情報 */}
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>{progress.percentage.toFixed(1)}%</span>
+                    <span>
+                      {formatBytes(progress.loaded)} /{' '}
+                      {formatBytes(progress.total)}
+                    </span>
+                  </div>
+                  {/* 速度と残り時間 */}
+                  {progress.speed > 0 && (
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>{formatSpeed(progress.speed)}</span>
+                      <span>{progress.estimatedTimeRemaining}</span>
+                    </div>
+                  )}
+                  {/* キャンセルボタン */}
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      cancelUpload()
+                    }}
+                    className="w-full mt-2 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors flex items-center justify-center gap-2"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    キャンセル
+                  </button>
+                </div>
               )}
             </div>
           ) : error ? (

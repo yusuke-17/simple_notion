@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/minio/minio-go/v7"
 
 	"simple-notion-backend/internal/models"
 	"simple-notion-backend/internal/repository"
@@ -240,6 +241,53 @@ func (s *FileService) GetPresignedURLByFileKey(ctx context.Context, fileKey stri
 	}
 
 	return presignedURL, nil
+}
+
+// GetPresignedURLByFilename は ファイル名から署名付きURLを取得します（認証不要）
+// ServeFileハンドラーから呼び出されます
+func (s *FileService) GetPresignedURLByFilename(ctx context.Context, filename string) (string, error) {
+	// 1. ファイルメタデータを取得
+	fileMeta, err := s.fileRepo.GetByFilename(ctx, filename)
+	if err != nil {
+		return "", fmt.Errorf("failed to get file metadata: %w", err)
+	}
+
+	// 2. ステータスチェック
+	if fileMeta.Status != "active" {
+		return "", fmt.Errorf("file is not available: status=%s", fileMeta.Status)
+	}
+
+	// 3. 署名付きURLを生成
+	presignedURL, err := s.s3Client.GetPresignedURL(ctx, fileMeta.FileKey, time.Duration(s.presignExpiry)*time.Second)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
+	}
+
+	return presignedURL, nil
+}
+
+// GetFileMetadataByFilename は ファイル名からファイルメタデータを取得します（認証不要）
+func (s *FileService) GetFileMetadataByFilename(ctx context.Context, filename string) (*models.FileMetadata, error) {
+	fileMeta, err := s.fileRepo.GetByFilename(ctx, filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file metadata: %w", err)
+	}
+
+	if fileMeta.Status != "active" {
+		return nil, fmt.Errorf("file is not available: status=%s", fileMeta.Status)
+	}
+
+	return fileMeta, nil
+}
+
+// GetFileObject は MinIOからファイルオブジェクトを取得します
+func (s *FileService) GetFileObject(ctx context.Context, fileKey string) (*minio.Object, error) {
+	object, err := s.s3Client.GetObject(ctx, fileKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get object from S3: %w", err)
+	}
+
+	return object, nil
 }
 
 // DeleteFile は ファイルを削除します（ソフトデリート）

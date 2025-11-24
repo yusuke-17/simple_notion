@@ -366,3 +366,46 @@ func (r *FileRepository) UpdateBlockID(ctx context.Context, fileID int, blockID 
 
 	return nil
 }
+
+// GetByFilename は ファイル名の末尾からファイルメタデータを検索します
+// file_keyが "prefix/userID/uuid_filename" の形式になっているため、
+// ファイル名の末尾でマッチするレコードを検索します
+func (r *FileRepository) GetByFilename(ctx context.Context, filename string) (*models.FileMetadata, error) {
+	query := `
+		SELECT id, user_id, document_id, block_id, file_key, bucket_name,
+		       original_name, file_size, mime_type, file_type, width, height,
+		       uploaded_at, status, deleted_at
+		FROM file_metadata
+		WHERE file_key LIKE '%' || $1 AND status = 'active'
+		ORDER BY uploaded_at DESC
+		LIMIT 1
+	`
+
+	var row models.FileMetadataRow
+	err := r.db.QueryRowContext(ctx, query, filename).Scan(
+		&row.ID,
+		&row.UserID,
+		&row.DocumentID,
+		&row.BlockID,
+		&row.FileKey,
+		&row.BucketName,
+		&row.OriginalName,
+		&row.FileSize,
+		&row.MimeType,
+		&row.FileType,
+		&row.Width,
+		&row.Height,
+		&row.UploadedAt,
+		&row.Status,
+		&row.DeletedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("file metadata not found: filename=%s", filename)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file metadata: %w", err)
+	}
+
+	return row.ToFileMetadata(), nil
+}

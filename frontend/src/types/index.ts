@@ -123,6 +123,37 @@ export interface UploadProgress {
   error?: string
 }
 
+// アップロード進捗詳細情報
+export interface UploadProgressInfo {
+  loaded: number // アップロード済みバイト数
+  total: number // 総バイト数
+  percentage: number // 進捗率 (0-100)
+  speed: number // アップロード速度 (バイト/秒)
+  remainingTime: number // 残り時間 (秒)
+  estimatedTimeRemaining: string // 残り時間の人間が読みやすい形式
+}
+
+// アップロードコールバック
+export interface UploadCallbacks {
+  onProgress?: (progress: UploadProgressInfo) => void
+  onSuccess?: (response: UploadResponse) => void
+  onError?: (error: Error) => void
+  onAbort?: () => void
+}
+
+// アップロードコントローラー（キャンセル用）
+export interface UploadController {
+  abort: () => void
+  xhr: XMLHttpRequest
+}
+
+// リトライ設定
+export interface RetryConfig {
+  maxRetries?: number // 最大リトライ回数（デフォルト: 3）
+  retryDelay?: number // リトライ間隔（ミリ秒、デフォルト: 1000）
+  backoffMultiplier?: number // 遅延倍率（デフォルト: 2 = 指数バックオフ）
+}
+
 // Document with blocks type for the editor (共通化のためここに移動)
 export interface DocumentWithBlocks extends Document {
   blocks?: Block[]

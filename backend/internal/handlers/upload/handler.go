@@ -3,6 +3,7 @@ package upload
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -161,9 +162,9 @@ func (h *UploadHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// キャッシュに保存（TTL: 23時間）
-	h.setCachedURL(fileMeta.FileKey, presignedURL, 23*time.Hour)
+	h.setCachedURL(filepath.Base(fileMeta.FileKey), presignedURL, 23*time.Hour)
 
-	// 成功レスポンス
+	// 成功レスポンス（相対パスを返す）
 	response := UploadResponse{
 		Success:  true,
 		FileID:   fileMeta.ID,
@@ -216,9 +217,9 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// キャッシュに保存（TTL: 23時間）
-	h.setCachedURL(fileMeta.FileKey, presignedURL, 23*time.Hour)
+	h.setCachedURL(filepath.Base(fileMeta.FileKey), presignedURL, 23*time.Hour)
 
-	// 成功レスポンス
+	// 成功レスポンス（相対パスを返す）
 	response := UploadResponse{
 		Success:  true,
 		FileID:   fileMeta.ID,
@@ -305,28 +306,37 @@ func (h *UploadHandler) GetStorageUsage(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(response)
 }
 
-// ServeFile は MinIOからファイルを配信するハンドラー（互換性のため）
+// ServeFile は MinIOからファイルを配信するハンドラー（プロキシ方式）
 func (h *UploadHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 	// パラメータからファイル名を取得
 	vars := mux.Vars(r)
 	filename := vars["filename"]
 
-	// ファイルキーを構築（簡易的に最新のファイルキーから検索）
-	// 注意: 本番環境では、ファイル名からファイルキーへのマッピングをDBで管理すべき
-	// ここでは、キャッシュから検索またはfileKeyとして使用
-
-	// まずキャッシュから検索
-	cachedURL, found := h.getCachedURL(filename)
-	if found {
-		// キャッシュヒット: リダイレクト
-		http.Redirect(w, r, cachedURL, http.StatusTemporaryRedirect)
+	// データベースから検索してファイルメタデータを取得
+	fileMeta, err := h.fileService.GetFileMetadataByFilename(r.Context(), filename)
+	if err != nil {
+		// ファイルが見つからない場合は404を返す
+		http.Error(w, "File not found", http.StatusNotFound)
 		return
 	}
 
-	// キャッシュミス: ファイル名からファイルキーを推測して署名付きURLを取得
-	// 注意: この実装は簡易版です。本番環境では適切なファイルキー管理が必要
-	// 仮実装として、エラーを返す
-	http.Error(w, "File not found in cache. Please re-upload the file.", http.StatusNotFound)
+	// MinIOからファイルを取得
+	object, err := h.fileService.GetFileObject(r.Context(), fileMeta.FileKey)
+	if err != nil {
+		http.Error(w, "Failed to retrieve file", http.StatusInternalServerError)
+		return
+	}
+	defer object.Close()
+
+	// Content-Typeを設定
+	w.Header().Set("Content-Type", fileMeta.MimeType)
+	w.Header().Set("Cache-Control", "public, max-age=86400") // 24時間キャッシュ
+
+	// ファイルをストリーミング
+	if _, err := io.Copy(w, object); err != nil {
+		// エラーログを出力するが、レスポンスは既に開始されている可能性があるため何もしない
+		return
+	}
 }
 
 // ヘルパー関数

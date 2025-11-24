@@ -1,10 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   validateFile,
   formatFileSize,
   getFileTypeName,
   getFileIconName,
   getFileExtension,
+  formatSpeed,
+  uploadFileWithProgress,
   ALLOWED_FILE_TYPES,
   MAX_FILE_SIZE,
 } from '../fileUploadUtils'
@@ -190,6 +192,80 @@ describe('fileUploadUtils', () => {
 
     it('MAX_FILE_SIZEが10MBに設定されている', () => {
       expect(MAX_FILE_SIZE).toBe(10 * 1024 * 1024)
+    })
+  })
+
+  describe('formatSpeed', () => {
+    it('速度を人間が読みやすい形式に変換する', () => {
+      expect(formatSpeed(0)).toBe('0 B/s')
+      expect(formatSpeed(512)).toBe('512.0 B/s')
+      expect(formatSpeed(1024)).toBe('1.0 KB/s')
+      expect(formatSpeed(1024 * 1024)).toBe('1.0 MB/s')
+    })
+  })
+
+  describe('uploadFileWithProgress', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let mockXHR: any
+
+    beforeEach(() => {
+      // XMLHttpRequestのモック
+      mockXHR = {
+        open: vi.fn(),
+        send: vi.fn(),
+        abort: vi.fn(),
+        upload: {
+          addEventListener: vi.fn(),
+        },
+        addEventListener: vi.fn(),
+        withCredentials: false,
+        status: 200,
+        responseText: '',
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      global.XMLHttpRequest = vi.fn(() => mockXHR) as any
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('正常にファイルをアップロードし、コントローラーを返す', () => {
+      const file = new File(['test'], 'test.pdf', { type: 'application/pdf' })
+      const onProgress = vi.fn()
+
+      const controller = uploadFileWithProgress(file, { onProgress })
+
+      expect(controller).toHaveProperty('abort')
+      expect(controller).toHaveProperty('xhr')
+      expect(mockXHR.open).toHaveBeenCalledWith(
+        'POST',
+        'http://localhost:8080/api/upload/file'
+      )
+      expect(mockXHR.withCredentials).toBe(true)
+    })
+
+    it('無効なファイルの場合、エラーコールバックが呼ばれる', () => {
+      const file = new File(['test'], 'test.mp4', { type: 'video/mp4' })
+      const onError = vi.fn()
+
+      uploadFileWithProgress(file, { onError })
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('サポートされていないファイル形式'),
+        })
+      )
+    })
+
+    it('abort()を呼ぶとアップロードがキャンセルされる', () => {
+      const file = new File(['test'], 'test.pdf', { type: 'application/pdf' })
+
+      const controller = uploadFileWithProgress(file, {})
+      controller.abort()
+
+      expect(mockXHR.abort).toHaveBeenCalled()
     })
   })
 })

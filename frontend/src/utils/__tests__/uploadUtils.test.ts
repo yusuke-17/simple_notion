@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   validateImageFile,
   uploadImageFile,
@@ -7,6 +7,8 @@ import {
   createPreviewUrl,
   cleanupPreviewUrl,
   formatBytes,
+  formatSpeed,
+  uploadImageFileWithProgress,
   UPLOAD_CONFIG,
 } from '@/utils/uploadUtils'
 
@@ -305,6 +307,123 @@ describe('uploadUtils', () => {
       expect(formatBytes(1536, 0)).toBe('2 KB')
       expect(formatBytes(1536, 1)).toBe('1.5 KB')
       expect(formatBytes(1536, 3)).toBe('1.500 KB')
+    })
+  })
+
+  describe('formatSpeed', () => {
+    test('速度のフォーマット', () => {
+      expect(formatSpeed(0)).toBe('0 B/s')
+      expect(formatSpeed(512)).toBe('512.0 B/s')
+      expect(formatSpeed(1024)).toBe('1.0 KB/s')
+      expect(formatSpeed(1024 * 1024)).toBe('1.0 MB/s')
+      expect(formatSpeed(1.5 * 1024 * 1024)).toBe('1.5 MB/s')
+    })
+  })
+
+  describe('uploadImageFileWithProgress', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let mockXHR: any
+
+    beforeEach(() => {
+      // XMLHttpRequestのモック
+      mockXHR = {
+        open: vi.fn(),
+        send: vi.fn(),
+        abort: vi.fn(),
+        setRequestHeader: vi.fn(),
+        upload: {
+          addEventListener: vi.fn(),
+        },
+        addEventListener: vi.fn(),
+        withCredentials: false,
+        status: 200,
+        responseText: '',
+      }
+
+      // グローバルXMLHttpRequestを置き換え
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      global.XMLHttpRequest = vi.fn(() => mockXHR) as any
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    test('正常にファイルをアップロードし、コントローラーを返す', () => {
+      const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+      const onProgress = vi.fn()
+      const onSuccess = vi.fn()
+
+      const controller = uploadImageFileWithProgress(file, {
+        onProgress,
+        onSuccess,
+      })
+
+      expect(controller).toHaveProperty('abort')
+      expect(controller).toHaveProperty('xhr')
+      expect(mockXHR.open).toHaveBeenCalledWith(
+        'POST',
+        UPLOAD_CONFIG.UPLOAD_ENDPOINT
+      )
+      expect(mockXHR.withCredentials).toBe(true)
+    })
+
+    test('無効なファイルの場合、エラーコールバックが呼ばれる', () => {
+      const file = new File(['test'], 'test.txt', { type: 'text/plain' })
+      const onError = vi.fn()
+
+      uploadImageFileWithProgress(file, { onError })
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('サポートされていない'),
+        })
+      )
+    })
+
+    test('abort()を呼ぶとアップロードがキャンセルされる', () => {
+      const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+
+      const controller = uploadImageFileWithProgress(file, {})
+      controller.abort()
+
+      expect(mockXHR.abort).toHaveBeenCalled()
+    })
+
+    test('進捗イベントハンドラーが登録される', () => {
+      const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+      const onProgress = vi.fn()
+
+      uploadImageFileWithProgress(file, { onProgress })
+
+      expect(mockXHR.upload.addEventListener).toHaveBeenCalledWith(
+        'progress',
+        expect.any(Function)
+      )
+    })
+
+    test('アップロード成功時にonSuccessが呼ばれる', () => {
+      const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+      const onSuccess = vi.fn()
+      const mockResponse = {
+        success: true,
+        url: '/uploads/test.jpg',
+        filename: 'test.jpg',
+      }
+
+      mockXHR.responseText = JSON.stringify(mockResponse)
+      mockXHR.status = 200
+
+      uploadImageFileWithProgress(file, { onSuccess })
+
+      // loadイベントハンドラーを取得して実行
+      const loadHandler = mockXHR.addEventListener.mock.calls.find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (call: any) => call[0] === 'load'
+      )?.[1]
+      loadHandler?.()
+
+      expect(onSuccess).toHaveBeenCalledWith(mockResponse)
     })
   })
 
