@@ -45,6 +45,9 @@ services:
       S3_REGION: us-east-1
       S3_USE_SSL: "false"
       S3_PRESIGN_EXPIRY: "86400"
+      # ファイルアップロード制限
+      MAX_FILE_SIZE: "10485760"        # 10MB (バイト単位)
+      USER_STORAGE_QUOTA: "104857600"  # 100MB (バイト単位)
     volumes:
       - ./backend:/app
       - /app/tmp

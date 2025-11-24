@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -18,6 +19,11 @@ import (
 	"simple-notion-backend/internal/models"
 	"simple-notion-backend/internal/repository"
 	"simple-notion-backend/internal/storage"
+)
+
+var (
+	// ErrStorageQuotaExceeded は ストレージクォータ超過エラー
+	ErrStorageQuotaExceeded = errors.New("storage quota exceeded")
 )
 
 // FileService は ファイル管理のビジネスロジックを提供します
@@ -41,6 +47,22 @@ func NewFileService(
 		maxFileSize:   maxFileSize,
 		presignExpiry: presignExpiry,
 	}
+}
+
+// CheckStorageQuota は ユーザーのストレージクォータをチェックします
+func (s *FileService) CheckStorageQuota(ctx context.Context, userID int, newFileSize int64, quota int64) error {
+	// 現在のストレージ使用量を取得
+	usage, err := s.fileRepo.GetUserStorageUsage(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user storage usage: %w", err)
+	}
+
+	// クォータチェック
+	if usage.TotalBytes+newFileSize > quota {
+		return ErrStorageQuotaExceeded
+	}
+
+	return nil
 }
 
 // UploadImage は 画像ファイルをアップロードします
