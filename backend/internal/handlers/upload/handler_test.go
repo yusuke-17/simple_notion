@@ -2,6 +2,7 @@ package upload
 
 import (
 	"testing"
+	"time"
 )
 
 // TestNewUploadHandler は UploadHandler の初期化テスト
@@ -28,7 +29,7 @@ func TestCacheOperations(t *testing.T) {
 	// キャッシュに保存
 	testFileKey := "test-file-key"
 	testURL := "https://example.com/test-url"
-	handler.setCachedURL(testFileKey, testURL, 1*60*60) // 1時間
+	handler.setCachedURL(testFileKey, testURL, 1*time.Hour) // 1時間
 
 	// キャッシュから取得
 	cachedURL, found := handler.getCachedURL(testFileKey)
