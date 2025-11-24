@@ -39,12 +39,16 @@ services:
       ENVIRONMENT: development
       # MinIO/S3 設定
       S3_ENDPOINT: minio:9000
+      S3_EXTERNAL_ENDPOINT: localhost:9000
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
       S3_BUCKET_NAME: simple-notion-files
       S3_REGION: us-east-1
       S3_USE_SSL: "false"
       S3_PRESIGN_EXPIRY: "86400"
+      # ファイルアップロード制限
+      MAX_FILE_SIZE: "10485760"        # 10MB (バイト単位)
+      USER_STORAGE_QUOTA: "104857600"  # 100MB (バイト単位)
     volumes:
       - ./backend:/app
       - /app/tmp
@@ -87,6 +91,8 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+      # CORS設定を環境変数で指定
+      MINIO_API_CORS_ALLOW_ORIGIN: "http://localhost:5173,http://localhost:3000"
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data

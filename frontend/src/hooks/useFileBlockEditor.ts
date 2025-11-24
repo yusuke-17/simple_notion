@@ -1,10 +1,15 @@
 import { useState, useCallback, useRef } from 'react'
-import type { FileBlockContent, FileUploadResponse } from '@/types'
+import type {
+  FileBlockContent,
+  FileUploadResponse,
+  UploadProgressInfo,
+  UploadController,
+} from '@/types'
 import {
-  uploadFile,
   validateFile,
   formatFileSize,
   getFileTypeName,
+  uploadFileWithProgress,
 } from '@/utils/fileUploadUtils'
 
 /**
@@ -30,16 +35,19 @@ export const useFileBlockEditor = (
   // アップロード状態管理
   const [uploadState, setUploadState] = useState<{
     isUploading: boolean
-    progress: number // 0-100
+    progress: UploadProgressInfo | null
     error: string | null
   }>({
     isUploading: false,
-    progress: 0,
+    progress: null,
     error: null,
   })
 
   // ファイル入力要素への参照
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // アップロードコントローラー（キャンセル用）
+  const uploadControllerRef = useRef<UploadController | null>(null)
 
   /**
    * ファイルコンテンツを更新する
@@ -73,7 +81,7 @@ export const useFileBlockEditor = (
       if (!validation.isValid) {
         setUploadState({
           isUploading: false,
-          progress: 0,
+          progress: null,
           error: validation.error || 'ファイルの検証に失敗しました',
         })
         return
@@ -83,54 +91,78 @@ export const useFileBlockEditor = (
         // アップロード開始
         setUploadState({
           isUploading: true,
-          progress: 0,
+          progress: null,
           error: null,
         })
 
-        // プログレス更新のシミュレーション
-        const progressInterval = setInterval(() => {
-          setUploadState(prev => ({
-            ...prev,
-            progress: Math.min(prev.progress + 10, 90),
-          }))
-        }, 200)
+        // アップロード開始（XMLHttpRequestベース、進捗付き）
+        const controller = uploadFileWithProgress(file, {
+          onProgress: progressInfo => {
+            setUploadState(prev => ({
+              ...prev,
+              progress: progressInfo,
+            }))
+          },
+          onSuccess: response => {
+            const uploadResponse = response as FileUploadResponse
+            if (
+              uploadResponse.success &&
+              uploadResponse.url &&
+              uploadResponse.filename
+            ) {
+              // アップロード成功
+              const newContent: FileBlockContent = {
+                filename: uploadResponse.filename,
+                fileSize: uploadResponse.fileSize || file.size,
+                mimeType: uploadResponse.mimeType || file.type,
+                uploadedAt: new Date().toISOString(),
+                downloadUrl: uploadResponse.url,
+                originalName: file.name,
+              }
 
-        // ファイルアップロード
-        const response: FileUploadResponse = await uploadFile(file)
+              updateContent(newContent)
 
-        clearInterval(progressInterval)
+              setUploadState({
+                isUploading: false,
+                progress: null,
+                error: null,
+              })
 
-        if (response.success && response.url && response.filename) {
-          // アップロード成功
-          const newContent: FileBlockContent = {
-            filename: response.filename,
-            fileSize: response.fileSize || file.size,
-            mimeType: response.mimeType || file.type,
-            uploadedAt: new Date().toISOString(),
-            downloadUrl: response.url,
-            originalName: file.name,
-          }
+              // コントローラーをクリア
+              uploadControllerRef.current = null
+            } else {
+              throw new Error(response.message || 'アップロードに失敗しました')
+            }
+          },
+          onError: error => {
+            console.error('File upload error:', error)
+            setUploadState({
+              isUploading: false,
+              progress: null,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : 'アップロードに失敗しました',
+            })
 
-          updateContent(newContent)
+            // コントローラーをクリア
+            uploadControllerRef.current = null
+          },
+          onAbort: () => {
+            // キャンセル時の処理
+            setUploadState({
+              isUploading: false,
+              progress: null,
+              error: null,
+            })
 
-          setUploadState({
-            isUploading: false,
-            progress: 100,
-            error: null,
-          })
-        } else {
-          throw new Error(response.message || 'アップロードに失敗しました')
-        }
-      } catch (error) {
-        console.error('File upload error:', error)
-        setUploadState({
-          isUploading: false,
-          progress: 0,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'アップロードに失敗しました',
+            // コントローラーをクリア
+            uploadControllerRef.current = null
+          },
         })
+
+        // コントローラーを保存（キャンセル用）
+        uploadControllerRef.current = controller
       } finally {
         // ファイル入力をリセット
         if (fileInputRef.current) {
@@ -157,7 +189,7 @@ export const useFileBlockEditor = (
       if (!validation.isValid) {
         setUploadState({
           isUploading: false,
-          progress: 0,
+          progress: null,
           error: validation.error || 'ファイルの検証に失敗しました',
         })
         return
@@ -167,49 +199,85 @@ export const useFileBlockEditor = (
         // アップロード開始
         setUploadState({
           isUploading: true,
-          progress: 0,
+          progress: null,
           error: null,
         })
 
-        // プログレス更新のシミュレーション
-        const progressInterval = setInterval(() => {
-          setUploadState(prev => ({
-            ...prev,
-            progress: Math.min(prev.progress + 10, 90),
-          }))
-        }, 200)
+        // アップロード開始（XMLHttpRequestベース、進捗付き）
+        const controller = uploadFileWithProgress(file, {
+          onProgress: progressInfo => {
+            setUploadState(prev => ({
+              ...prev,
+              progress: progressInfo,
+            }))
+          },
+          onSuccess: response => {
+            const uploadResponse = response as FileUploadResponse
+            if (
+              uploadResponse.success &&
+              uploadResponse.url &&
+              uploadResponse.filename
+            ) {
+              // アップロード成功
+              const newContent: FileBlockContent = {
+                filename: uploadResponse.filename,
+                fileSize: uploadResponse.fileSize || file.size,
+                mimeType: uploadResponse.mimeType || file.type,
+                uploadedAt: new Date().toISOString(),
+                downloadUrl: uploadResponse.url,
+                originalName: file.name,
+              }
 
-        // ファイルアップロード
-        const response: FileUploadResponse = await uploadFile(file)
+              updateContent(newContent)
 
-        clearInterval(progressInterval)
+              setUploadState({
+                isUploading: false,
+                progress: null,
+                error: null,
+              })
 
-        if (response.success && response.url && response.filename) {
-          // アップロード成功
-          const newContent: FileBlockContent = {
-            filename: response.filename,
-            fileSize: response.fileSize || file.size,
-            mimeType: response.mimeType || file.type,
-            uploadedAt: new Date().toISOString(),
-            downloadUrl: response.url,
-            originalName: file.name,
-          }
+              // コントローラーをクリア
+              uploadControllerRef.current = null
+            } else {
+              throw new Error(
+                uploadResponse.message || 'アップロードに失敗しました'
+              )
+            }
+          },
+          onError: error => {
+            console.error('File upload error:', error)
+            setUploadState({
+              isUploading: false,
+              progress: null,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : 'アップロードに失敗しました',
+            })
 
-          updateContent(newContent)
+            // コントローラーをクリア
+            uploadControllerRef.current = null
+          },
+          onAbort: () => {
+            // キャンセル時の処理
+            setUploadState({
+              isUploading: false,
+              progress: null,
+              error: null,
+            })
 
-          setUploadState({
-            isUploading: false,
-            progress: 100,
-            error: null,
-          })
-        } else {
-          throw new Error(response.message || 'アップロードに失敗しました')
-        }
+            // コントローラーをクリア
+            uploadControllerRef.current = null
+          },
+        })
+
+        // コントローラーを保存（キャンセル用）
+        uploadControllerRef.current = controller
       } catch (error) {
         console.error('File upload error:', error)
         setUploadState({
           isUploading: false,
-          progress: 0,
+          progress: null,
           error:
             error instanceof Error
               ? error.message
@@ -232,9 +300,22 @@ export const useFileBlockEditor = (
   )
 
   /**
+   * アップロードをキャンセルする
+   */
+  const cancelUpload = useCallback(() => {
+    if (uploadControllerRef.current) {
+      uploadControllerRef.current.abort()
+      uploadControllerRef.current = null
+    }
+  }, [])
+
+  /**
    * ファイルを削除する
    */
   const removeFile = useCallback(() => {
+    // アップロード中の場合はキャンセル
+    cancelUpload()
+
     const emptyContent: FileBlockContent = {
       filename: '',
       fileSize: 0,
@@ -249,10 +330,10 @@ export const useFileBlockEditor = (
 
     setUploadState({
       isUploading: false,
-      progress: 0,
+      progress: null,
       error: null,
     })
-  }, [onContentChange])
+  }, [onContentChange, cancelUpload])
 
   /**
    * ファイルをダウンロードする
@@ -299,6 +380,7 @@ export const useFileBlockEditor = (
     handleDragOver,
     removeFile,
     downloadFile,
+    cancelUpload,
 
     // 計算されたプロパティ
     hasFile,

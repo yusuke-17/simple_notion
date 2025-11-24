@@ -14,13 +14,14 @@ import (
 
 // S3Client は MinIO/S3 クライアントをラップした構造体です
 type S3Client struct {
-	client     *minio.Client
-	bucketName string
-	region     string
+	client           *minio.Client
+	bucketName       string
+	region           string
+	externalEndpoint string // ブラウザからアクセス可能なエンドポイント
 }
 
 // NewS3Client は 新しい S3Client インスタンスを作成します
-func NewS3Client(endpoint, accessKey, secretKey, bucketName, region string, useSSL bool) (*S3Client, error) {
+func NewS3Client(endpoint, accessKey, secretKey, bucketName, region string, useSSL bool, externalEndpoint string) (*S3Client, error) {
 	// MinIOクライアントの初期化
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
@@ -30,10 +31,16 @@ func NewS3Client(endpoint, accessKey, secretKey, bucketName, region string, useS
 		return nil, fmt.Errorf("failed to create minio client: %w", err)
 	}
 
+	// 外部エンドポイントが未設定の場合は内部エンドポイントを使用
+	if externalEndpoint == "" {
+		externalEndpoint = endpoint
+	}
+
 	s3Client := &S3Client{
-		client:     minioClient,
-		bucketName: bucketName,
-		region:     region,
+		client:           minioClient,
+		bucketName:       bucketName,
+		region:           region,
+		externalEndpoint: externalEndpoint,
 	}
 
 	// バケットの存在確認と作成
@@ -41,7 +48,7 @@ func NewS3Client(endpoint, accessKey, secretKey, bucketName, region string, useS
 		return nil, fmt.Errorf("failed to ensure bucket: %w", err)
 	}
 
-	log.Printf("S3 Client initialized successfully (bucket: %s, endpoint: %s)", bucketName, endpoint)
+	log.Printf("S3 Client initialized successfully (bucket: %s, endpoint: %s, external: %s)", bucketName, endpoint, externalEndpoint)
 
 	return s3Client, nil
 }
@@ -115,7 +122,33 @@ func (s *S3Client) GetPresignedURL(ctx context.Context, fileKey string, expires 
 		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
 	}
 
-	return presignedURL.String(), nil
+	// URLのホスト名を外部エンドポイントに置換
+	convertedURL, err := s.convertToExternalURL(presignedURL.String())
+	if err != nil {
+		return "", fmt.Errorf("failed to convert to external URL: %w", err)
+	}
+
+	return convertedURL, nil
+}
+
+// convertToExternalURL は 内部エンドポイントを外部エンドポイントに変換します
+func (s *S3Client) convertToExternalURL(internalURL string) (string, error) {
+	parsedURL, err := url.Parse(internalURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse URL: %w", err)
+	}
+
+	// 外部エンドポイントをパース
+	externalURL, err := url.Parse("http://" + s.externalEndpoint)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse external endpoint: %w", err)
+	}
+
+	// ホストとポートを置換
+	parsedURL.Scheme = externalURL.Scheme
+	parsedURL.Host = externalURL.Host
+
+	return parsedURL.String(), nil
 }
 
 // StatObject は ファイルの情報を取得します

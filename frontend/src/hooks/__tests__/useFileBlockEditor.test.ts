@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useFileBlockEditor } from '../useFileBlockEditor'
 
-// uploadFile関数をモック
+// uploadFileWithProgress関数をモック
 vi.mock('@/utils/fileUploadUtils', () => ({
   validateFile: vi.fn((file: File) => {
     // 簡易的な検証ロジック
@@ -11,15 +11,50 @@ vi.mock('@/utils/fileUploadUtils', () => ({
     }
     return { isValid: true }
   }),
-  uploadFile: vi.fn((file: File) => {
-    // onProgressパラメータを削除し、単純にPromiseを返す
-    return Promise.resolve({
-      success: true,
-      url: 'http://localhost:8080/uploads/test-file.pdf',
-      mimeType: file.type,
-      fileSize: file.size,
-      filename: file.name,
-    })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  uploadFileWithProgress: vi.fn((file: File, callbacks?: any) => {
+    // コールバックを即座に実行してアップロード完了をシミュレート
+    if (callbacks?.onProgress) {
+      // 進捗を50%、100%と段階的に呼び出す
+      setTimeout(() => {
+        callbacks.onProgress({
+          loaded: file.size / 2,
+          total: file.size,
+          percentage: 50,
+          speed: 1000,
+          remainingTime: 1,
+          estimatedTimeRemaining: '約1秒',
+        })
+      }, 10)
+
+      setTimeout(() => {
+        callbacks.onProgress({
+          loaded: file.size,
+          total: file.size,
+          percentage: 100,
+          speed: 1000,
+          remainingTime: 0,
+          estimatedTimeRemaining: '完了',
+        })
+      }, 20)
+    }
+
+    if (callbacks?.onSuccess) {
+      setTimeout(() => {
+        callbacks.onSuccess({
+          success: true,
+          url: 'http://localhost:8080/uploads/test-file.pdf',
+          mimeType: file.type,
+          fileSize: file.size,
+          filename: file.name,
+        })
+      }, 30)
+    }
+    // UploadControllerを返す
+    return {
+      abort: vi.fn(),
+      xhr: new XMLHttpRequest(),
+    }
   }),
   formatFileSize: vi.fn((bytes: number) => `${bytes} Bytes`),
   getFileTypeName: vi.fn(() => 'PDF'),
@@ -48,7 +83,7 @@ describe('useFileBlockEditor', () => {
 
     expect(result.current.content.downloadUrl).toBe('')
     expect(result.current.isUploading).toBe(false)
-    expect(result.current.uploadProgress).toBe(0)
+    expect(result.current.uploadProgress).toBeNull()
     expect(result.current.uploadError).toBeNull()
     expect(result.current.hasFile).toBe(false)
   })
@@ -230,8 +265,9 @@ describe('useFileBlockEditor', () => {
       await uploadPromise
     })
 
-    // アップロード完了後、プログレスは100%になる
-    expect(result.current.uploadProgress).toBe(100)
+    // アップロード完了後、進捗はnullになる(完了状態)
+    expect(result.current.uploadProgress).toBeNull()
+    expect(result.current.isUploading).toBe(false)
   })
 
   it('ファイルダウンロードが正しく動作する', () => {

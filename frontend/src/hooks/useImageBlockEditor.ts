@@ -1,11 +1,15 @@
 import { useState, useCallback, useRef } from 'react'
-import type { ImageBlockContent, UploadProgress } from '@/types'
+import type {
+  ImageBlockContent,
+  UploadProgressInfo,
+  UploadController,
+} from '@/types'
 import {
-  uploadImageFile,
   validateImageFile,
   createPreviewUrl,
   cleanupPreviewUrl,
   getImageDimensions,
+  uploadImageFileWithProgress,
 } from '@/utils/uploadUtils'
 
 /**
@@ -32,7 +36,7 @@ export const useImageBlockEditor = (
   // アップロード状態管理
   const [uploadState, setUploadState] = useState<{
     isUploading: boolean
-    progress: UploadProgress | null
+    progress: UploadProgressInfo | null
     error: string | null
     previewUrl: string | null
   }>({
@@ -44,6 +48,9 @@ export const useImageBlockEditor = (
 
   // ファイル入力要素への参照
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // アップロードコントローラー（キャンセル用）
+  const uploadControllerRef = useRef<UploadController | null>(null)
 
   /**
    * 画像コンテンツを更新する
@@ -90,50 +97,106 @@ export const useImageBlockEditor = (
         const dimensions = await getImageDimensions(file)
 
         // プレビュー状態を設定
-        setUploadState(prev => ({
-          ...prev,
-          previewUrl,
-          progress: {
-            filename: file.name,
-            progress: 0,
-            status: 'uploading' as const,
-          },
-        }))
-
-        // アップロード開始
-        setUploadState(prev => ({ ...prev, isUploading: true }))
-
-        const uploadResult = await uploadImageFile(file)
-
-        // アップロード成功時の処理
-        if (!uploadResult.url) {
-          throw new Error(
-            'アップロードは成功しましたが、画像URLが取得できませんでした'
-          )
-        }
-
-        const newContent: ImageBlockContent = {
-          src: uploadResult.url,
-          alt: file.name.replace(/\.[^/.]+$/, ''), // ファイル拡張子を除去
-          caption: '',
-          width: dimensions.width,
-          height: dimensions.height,
-          originalName: file.name,
-          fileSize: file.size,
-        }
-
-        updateContent(newContent)
-
-        // アップロード状態をリセット
-        setUploadState(prev => ({
-          ...prev,
-          isUploading: false,
+        setUploadState({
+          isUploading: true,
           progress: null,
-          previewUrl: null,
-        }))
+          error: null,
+          previewUrl,
+        })
 
-        // プレビューURLをクリーンアップ
-        cleanupPreviewUrl(previewUrl)
+        // アップロード開始（XMLHttpRequestベース、進捗付き）
+        const controller = uploadImageFileWithProgress(file, {
+          onProgress: progressInfo => {
+            setUploadState(prev => ({
+              ...prev,
+              progress: progressInfo,
+            }))
+          },
+          onSuccess: uploadResult => {
+            // アップロード成功時の処理
+            if (!uploadResult.url) {
+              // URLが取得できない場合はエラーとして処理
+              setUploadState(prev => ({
+                ...prev,
+                isUploading: false,
+                error:
+                  'アップロードは成功しましたが、画像URLが取得できませんでした',
+                progress: null,
+              }))
+
+              // プレビューURLをクリーンアップ
+              cleanupPreviewUrl(previewUrl)
+
+              // コントローラーをクリア
+              uploadControllerRef.current = null
+              return
+            }
+
+            const newContent: ImageBlockContent = {
+              src: uploadResult.url,
+              alt: file.name.replace(/\.[^/.]+$/, ''), // ファイル拡張子を除去
+              caption: '',
+              width: dimensions.width,
+              height: dimensions.height,
+              originalName: file.name,
+              fileSize: file.size,
+            }
+
+            updateContent(newContent)
+
+            // アップロード状態をリセット
+            setUploadState({
+              isUploading: false,
+              progress: null,
+              error: null,
+              previewUrl: null,
+            })
+
+            // プレビューURLをクリーンアップ
+            cleanupPreviewUrl(previewUrl)
+
+            // コントローラーをクリア
+            uploadControllerRef.current = null
+          },
+          onError: error => {
+            // エラー処理
+            const errorMessage =
+              error instanceof Error
+                ? error.message
+                : 'アップロードに失敗しました'
+
+            setUploadState(prev => ({
+              ...prev,
+              isUploading: false,
+              error: errorMessage,
+              progress: null,
+            }))
+
+            // プレビューURLをクリーンアップ
+            cleanupPreviewUrl(previewUrl)
+
+            // コントローラーをクリア
+            uploadControllerRef.current = null
+          },
+          onAbort: () => {
+            // キャンセル時の処理
+            setUploadState({
+              isUploading: false,
+              progress: null,
+              error: null,
+              previewUrl: null,
+            })
+
+            // プレビューURLをクリーンアップ
+            cleanupPreviewUrl(previewUrl)
+
+            // コントローラーをクリア
+            uploadControllerRef.current = null
+          },
+        })
+
+        // コントローラーを保存（キャンセル用）
+        uploadControllerRef.current = controller
       } catch (error) {
         // エラー処理
         const errorMessage =
@@ -208,9 +271,22 @@ export const useImageBlockEditor = (
   }, [])
 
   /**
+   * アップロードをキャンセルする
+   */
+  const cancelUpload = useCallback(() => {
+    if (uploadControllerRef.current) {
+      uploadControllerRef.current.abort()
+      uploadControllerRef.current = null
+    }
+  }, [])
+
+  /**
    * 画像を削除する
    */
   const removeImage = useCallback(() => {
+    // アップロード中の場合はキャンセル
+    cancelUpload()
+
     const emptyContent: ImageBlockContent = {
       src: '',
       alt: '',
@@ -231,7 +307,7 @@ export const useImageBlockEditor = (
       error: null,
       previewUrl: null,
     })
-  }, [onContentChange])
+  }, [onContentChange, cancelUpload])
 
   /**
    * 画像が設定されているかチェック
@@ -254,5 +330,6 @@ export const useImageBlockEditor = (
     updateAlt,
     removeImage,
     clearError,
+    cancelUpload,
   }
 }

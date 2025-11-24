@@ -10,50 +10,56 @@ import (
 	"simple-notion-backend/internal/config"
 	"simple-notion-backend/internal/handlers"
 	"simple-notion-backend/internal/handlers/document"
+	"simple-notion-backend/internal/handlers/upload"
 	"simple-notion-backend/internal/middleware"
 )
 
 // Router は、アプリケーションのHTTPルーターを管理する構造体です
 type Router struct {
-	router      *mux.Router
-	authHandler *handlers.AuthHandler
-	docHandler  *document.DocumentHandler
-	jwtSecret   []byte
-	metrics     *Metrics
+	router        *mux.Router
+	authHandler   *handlers.AuthHandler
+	docHandler    *document.DocumentHandler
+	uploadHandler *upload.UploadHandler
+	jwtSecret     []byte
+	metrics       *Metrics
 }
 
 // NewRouter は、新しいRouterインスタンスを作成します
 func NewRouter(
 	authHandler *handlers.AuthHandler,
 	docHandler *document.DocumentHandler,
+	uploadHandler *upload.UploadHandler,
 	jwtSecret []byte,
 ) *Router {
 	return &Router{
-		router:      mux.NewRouter(),
-		authHandler: authHandler,
-		docHandler:  docHandler,
-		jwtSecret:   jwtSecret,
+		router:        mux.NewRouter(),
+		authHandler:   authHandler,
+		docHandler:    docHandler,
+		uploadHandler: uploadHandler,
+		jwtSecret:     jwtSecret,
 	}
 }
 
 // NewRouterFromDependencies は、Dependenciesから新しいRouterインスタンスを作成します
 func NewRouterFromDependencies(deps *Dependencies) *Router {
 	return &Router{
-		router:      mux.NewRouter(),
-		authHandler: deps.AuthHandler,
-		docHandler:  deps.DocumentHandler,
-		jwtSecret:   deps.GetJWTSecret(),
+		router:        mux.NewRouter(),
+		authHandler:   deps.AuthHandler,
+		docHandler:    deps.DocumentHandler,
+		uploadHandler: deps.UploadHandler,
+		jwtSecret:     deps.GetJWTSecret(),
 	}
 }
 
 // NewRouterWithMetrics は、DependenciesとMetricsから新しいRouterインスタンスを作成します
 func NewRouterWithMetrics(deps *Dependencies, metrics *Metrics) *Router {
 	return &Router{
-		router:      mux.NewRouter(),
-		authHandler: deps.AuthHandler,
-		docHandler:  deps.DocumentHandler,
-		jwtSecret:   deps.GetJWTSecret(),
-		metrics:     metrics,
+		router:        mux.NewRouter(),
+		authHandler:   deps.AuthHandler,
+		docHandler:    deps.DocumentHandler,
+		uploadHandler: deps.UploadHandler,
+		jwtSecret:     deps.GetJWTSecret(),
+		metrics:       metrics,
 	}
 }
 
@@ -107,8 +113,8 @@ func (r *Router) setupPublicRoutes() {
 	r.router.HandleFunc("/api/auth/register", r.authHandler.Register).Methods("POST")
 	r.router.HandleFunc("/api/auth/logout", r.authHandler.Logout).Methods("POST")
 
-	// 静的ファイル配信（画像等）
-	r.router.HandleFunc("/api/uploads/{filename}", handlers.ServeUploadsHandler).Methods("GET")
+	// 静的ファイル配信（MinIO経由）
+	r.router.HandleFunc("/api/uploads/{filename}", r.uploadHandler.ServeFile).Methods("GET")
 }
 
 // setupProtectedRoutes は、認証必要エンドポイントを設定します
@@ -121,8 +127,10 @@ func (r *Router) setupProtectedRoutes() {
 	api.HandleFunc("/auth/me", r.authHandler.Me).Methods("GET")
 
 	// ファイルアップロード関連
-	api.HandleFunc("/upload/image", handlers.UploadImageHandler).Methods("POST", "OPTIONS")
-	api.HandleFunc("/upload/file", handlers.UploadFileHandler).Methods("POST", "OPTIONS")
+	api.HandleFunc("/upload/image", r.uploadHandler.UploadImage).Methods("POST", "OPTIONS")
+	api.HandleFunc("/upload/file", r.uploadHandler.UploadFile).Methods("POST", "OPTIONS")
+	api.HandleFunc("/files/{id:[0-9]+}/url", r.uploadHandler.GetPresignedURL).Methods("GET")
+	api.HandleFunc("/storage/usage", r.uploadHandler.GetStorageUsage).Methods("GET")
 
 	// ドキュメント関連
 	api.HandleFunc("/documents", r.docHandler.GetDocuments).Methods("GET")

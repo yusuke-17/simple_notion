@@ -21,11 +21,11 @@ const createMockHookReturn = (overrides = {}) => ({
   updateContent: vi.fn(),
   uploadState: {
     isUploading: false,
-    progress: 0,
+    progress: null,
     error: null,
   },
   isUploading: false,
-  uploadProgress: 0,
+  uploadProgress: null,
   uploadError: null,
   fileInputRef: { current: null },
   openFileDialog: vi.fn(),
@@ -34,6 +34,7 @@ const createMockHookReturn = (overrides = {}) => ({
   handleDragOver: vi.fn(),
   removeFile: vi.fn(),
   downloadFile: vi.fn(),
+  cancelUpload: vi.fn(), // キャンセル機能を追加
   hasFile: false,
   isReady: false,
   fileTypeName: 'ファイル',
@@ -89,14 +90,21 @@ describe('FileBlockEditor', () => {
       mockUseFileBlockEditor.mockReturnValue(
         createMockHookReturn({
           isUploading: true,
-          uploadProgress: 50,
+          uploadProgress: {
+            loaded: 512,
+            total: 1024,
+            percentage: 50,
+            speed: 1000,
+            remainingTime: 0.5,
+            estimatedTimeRemaining: '約1秒',
+          },
         })
       )
 
       render(<FileBlockEditor />)
 
       expect(screen.getByText('アップロード中...')).toBeInTheDocument()
-      expect(screen.getByText('50%')).toBeInTheDocument()
+      expect(screen.getByText('50.0%')).toBeInTheDocument()
     })
   })
 

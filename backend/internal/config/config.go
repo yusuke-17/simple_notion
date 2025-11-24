@@ -15,13 +15,18 @@ type Config struct {
 	CookieDomain   string // Cookie のドメイン
 
 	// MinIO/S3 設定
-	S3Endpoint      string
-	S3AccessKey     string
-	S3SecretKey     string
-	S3BucketName    string
-	S3Region        string
-	S3UseSSL        bool
-	S3PresignExpiry int // 署名付きURLの有効期限（秒）
+	S3Endpoint         string
+	S3ExternalEndpoint string // ブラウザからアクセス可能なエンドポイント
+	S3AccessKey        string
+	S3SecretKey        string
+	S3BucketName       string
+	S3Region           string
+	S3UseSSL           bool
+	S3PresignExpiry    int // 署名付きURLの有効期限（秒）
+
+	// ファイルアップロード制限
+	MaxFileSize      int64 // 単一ファイルの最大サイズ（バイト）
+	UserStorageQuota int64 // ユーザーあたりのストレージクォータ（バイト）
 }
 
 func Load() *Config {
@@ -35,13 +40,18 @@ func Load() *Config {
 		CookieDomain: getEnv("COOKIE_DOMAIN", ""),
 
 		// MinIO/S3 設定
-		S3Endpoint:      getEnv("S3_ENDPOINT", "minio:9000"),
-		S3AccessKey:     getEnv("S3_ACCESS_KEY", "minioadmin"),
-		S3SecretKey:     getEnv("S3_SECRET_KEY", "minioadmin"),
-		S3BucketName:    getEnv("S3_BUCKET_NAME", "simple-notion-files"),
-		S3Region:        getEnv("S3_REGION", "us-east-1"),
-		S3UseSSL:        getBoolEnv("S3_USE_SSL", false),
-		S3PresignExpiry: getIntEnv("S3_PRESIGN_EXPIRY", 86400), // デフォルト24時間
+		S3Endpoint:         getEnv("S3_ENDPOINT", "minio:9000"),
+		S3ExternalEndpoint: getEnv("S3_EXTERNAL_ENDPOINT", "localhost:9000"),
+		S3AccessKey:        getEnv("S3_ACCESS_KEY", "minioadmin"),
+		S3SecretKey:        getEnv("S3_SECRET_KEY", "minioadmin"),
+		S3BucketName:       getEnv("S3_BUCKET_NAME", "simple-notion-files"),
+		S3Region:           getEnv("S3_REGION", "us-east-1"),
+		S3UseSSL:           getBoolEnv("S3_USE_SSL", false),
+		S3PresignExpiry:    getIntEnv("S3_PRESIGN_EXPIRY", 86400), // デフォルト24時間
+
+		// ファイルアップロード制限
+		MaxFileSize:      getInt64Env("MAX_FILE_SIZE", 10485760),       // デフォルト10MB
+		UserStorageQuota: getInt64Env("USER_STORAGE_QUOTA", 104857600), // デフォルト100MB
 	}
 
 	// 環境に応じたセキュリティ設定
@@ -81,4 +91,16 @@ func getIntEnv(key string, defaultValue int) int {
 		return defaultValue
 	}
 	return intValue
+}
+
+func getInt64Env(key string, defaultValue int64) int64 {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	int64Value, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return defaultValue
+	}
+	return int64Value
 }
