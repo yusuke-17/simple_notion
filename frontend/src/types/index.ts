@@ -71,6 +71,12 @@ export interface ImageBlockContent {
   height?: number // 表示高さ
   originalName?: string // 元のファイル名
   fileSize?: number // ファイルサイズ（バイト）
+  // MinIO関連フィールド
+  fileKey?: string // MinIO内部キー（再取得用）
+  fileId?: number // file_metadata.id（API呼び出し用）
+  bucketName?: string // MinIOバケット名
+  uploadedAt?: string // アップロード日時（ISO 8601形式）
+  status?: 'active' | 'deleted' | 'orphaned' // ファイルステータス
 }
 
 // File block specific types (PDF, Word, Excel等)
@@ -82,14 +88,22 @@ export interface FileBlockContent {
   downloadUrl: string // ダウンロードURL
   previewUrl?: string // プレビューURL（PDF等）
   originalName?: string // 元のファイル名（ユーザーが見やすい名前）
+  // MinIO関連フィールド
+  fileKey?: string // MinIO内部キー
+  fileId?: number // file_metadata.id
+  bucketName?: string // MinIOバケット名
+  status?: 'active' | 'deleted' | 'orphaned' // ファイルステータス
+  fileType?: 'file' // ファイルタイプ（固定値）
 }
 
 // Upload related types
 export interface UploadResponse {
   success: boolean
+  fileId?: number // file_metadata.id (Backendから追加)
   filename?: string
   url?: string
   message?: string
+  fileKey?: string // MinIO内部キー（フロントで補完する可能性）
 }
 
 export interface FileUploadResponse extends UploadResponse {
@@ -129,4 +143,47 @@ export interface UseReadOnlyDocumentViewerReturn {
   // 計算されたプロパティ
   isEmpty: boolean
   isReady: boolean
+}
+
+// MinIO関連型定義
+
+// BackendのFileMetadata構造に対応するフロントエンド型
+export interface FileMetadata {
+  id: number
+  userId: number
+  documentId?: number | null
+  blockId?: number | null
+  fileKey: string // MinIO内部キー
+  bucketName: string // MinIOバケット名
+  originalName: string // 元のファイル名
+  fileSize: number // ファイルサイズ（バイト）
+  mimeType: string // MIMEタイプ
+  fileType: 'image' | 'file' // ファイルタイプ区別
+  width?: number | null // 画像幅（画像のみ）
+  height?: number | null // 画像高さ（画像のみ）
+  uploadedAt: string // アップロード日時（ISO 8601形式）
+  status: 'active' | 'deleted' | 'orphaned' // ファイルステータス
+  deletedAt?: string | null // 削除日時
+  metadata?: Record<string, unknown> // 追加メタデータ
+}
+
+// ストレージ使用量型
+export interface UserStorageUsage {
+  userId: number
+  fileCount: number // ファイル数
+  totalBytes: number // 合計バイト数
+  totalMb: number // 合計MB
+  quotaBytes: number // クォータ（バイト）
+  quotaMb: number // クォータMB
+  usageRate: number // 使用率 (0-100%)
+}
+
+// 署名付きURLレスポンス型
+export interface PresignedURLResponse {
+  url: string // MinIO署名付きURL（有効期限付き）
+}
+
+// 署名付きURL取得リクエスト型
+export interface GetPresignedURLRequest {
+  fileId: number
 }

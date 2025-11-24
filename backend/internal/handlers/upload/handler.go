@@ -94,6 +94,7 @@ func (h *UploadHandler) setCachedURL(fileKey, url string, ttl time.Duration) {
 // UploadResponse は アップロード成功時のレスポンス
 type UploadResponse struct {
 	Success  bool   `json:"success"`
+	FileID   int    `json:"fileId,omitempty"` // file_metadata.id
 	Filename string `json:"filename,omitempty"`
 	URL      string `json:"url,omitempty"`
 	Message  string `json:"message,omitempty"`
@@ -165,6 +166,7 @@ func (h *UploadHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 	// 成功レスポンス
 	response := UploadResponse{
 		Success:  true,
+		FileID:   fileMeta.ID,
 		Filename: fileMeta.OriginalName,
 		URL:      fmt.Sprintf("/api/uploads/%s", filepath.Base(fileMeta.FileKey)),
 		Message:  "Image uploaded successfully",
@@ -219,6 +221,7 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	// 成功レスポンス
 	response := UploadResponse{
 		Success:  true,
+		FileID:   fileMeta.ID,
 		Filename: fileMeta.OriginalName,
 		URL:      fmt.Sprintf("/api/uploads/%s", filepath.Base(fileMeta.FileKey)),
 		Message:  "File uploaded successfully",
