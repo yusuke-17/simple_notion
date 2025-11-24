@@ -115,9 +115,21 @@ export const useImageBlockEditor = (
           onSuccess: uploadResult => {
             // アップロード成功時の処理
             if (!uploadResult.url) {
-              throw new Error(
-                'アップロードは成功しましたが、画像URLが取得できませんでした'
-              )
+              // URLが取得できない場合はエラーとして処理
+              setUploadState(prev => ({
+                ...prev,
+                isUploading: false,
+                error:
+                  'アップロードは成功しましたが、画像URLが取得できませんでした',
+                progress: null,
+              }))
+
+              // プレビューURLをクリーンアップ
+              cleanupPreviewUrl(previewUrl)
+
+              // コントローラーをクリア
+              uploadControllerRef.current = null
+              return
             }
 
             const newContent: ImageBlockContent = {
