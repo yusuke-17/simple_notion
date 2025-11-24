@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
-import { usePresignedURL, usePresignedURLBatch } from '../usePresignedURL'
+import { renderHook, waitFor, act } from '@testing-library/react'
+import {
+  usePresignedURL,
+  usePresignedURLBatch,
+  clearAllPresignedURLCache,
+} from '../usePresignedURL'
 import * as minioUtils from '@/utils/minioUtils'
 
 // minioUtilsのモック
@@ -15,6 +19,7 @@ describe('usePresignedURL', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    clearAllPresignedURLCache() // ✅ キャッシュをクリア
     vi.mocked(minioUtils.isPresignedURLExpired).mockReturnValue(false)
   })
 
@@ -142,7 +147,9 @@ describe('usePresignedURL', () => {
     })
 
     // refetch実行
-    await result.current.refetch()
+    await act(async () => {
+      await result.current.refetch()
+    })
 
     // Assert
     await waitFor(() => {
@@ -197,6 +204,7 @@ describe('usePresignedURLBatch', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    clearAllPresignedURLCache() // ✅ キャッシュをクリア
     vi.mocked(minioUtils.isPresignedURLExpired).mockReturnValue(false)
   })
 
@@ -274,7 +282,9 @@ describe('usePresignedURLBatch', () => {
     })
 
     // refetchAll実行
-    await result.current.refetchAll()
+    await act(async () => {
+      await result.current.refetchAll()
+    })
 
     // Assert
     await waitFor(() => {

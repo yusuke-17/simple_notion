@@ -37,6 +37,14 @@ const urlCache = new Map<number, CachedURLEntry>()
 const CACHE_EXPIRATION_MS = 23 * 60 * 60 * 1000
 
 /**
+ * グローバルキャッシュをクリアする（テスト用）
+ * @internal
+ */
+export const clearAllPresignedURLCache = (): void => {
+  urlCache.clear()
+}
+
+/**
  * キャッシュエントリが期限切れかどうかをチェック
  *
  * @param entry - キャッシュエントリ
@@ -197,8 +205,11 @@ export const usePresignedURLBatch = (
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [errors, setErrors] = useState<Map<number, string>>(new Map())
 
-  // fileIdsを文字列化して比較用のキーとする
-  const fileIdsKey = useMemo(() => fileIds.sort().join(','), [fileIds])
+  // fileIdsを文字列化して比較用のキーとする（数値順にソート）
+  const fileIdsKey = useMemo(
+    () => [...fileIds].sort((a, b) => a - b).join(','),
+    [fileIds]
+  )
 
   const fetchAllURLs = useCallback(async () => {
     if (fileIds.length === 0) {
@@ -242,17 +253,19 @@ export const usePresignedURLBatch = (
     setUrlMap(newUrlMap)
     setErrors(newErrors)
     setIsLoading(false)
-  }, [fileIds])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileIdsKey]) // ✅ fileIdsKeyのみに依存（fileIdsの内容が変わった時だけ再生成）
 
   const refetchAll = useCallback(async () => {
     // 全てのキャッシュをクリア
     fileIds.forEach(fileId => urlCache.delete(fileId))
     await fetchAllURLs()
-  }, [fileIds, fetchAllURLs])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileIdsKey, fetchAllURLs]) // ✅ fileIdsKeyを使用
 
   useEffect(() => {
     fetchAllURLs()
-  }, [fileIdsKey, fetchAllURLs]) // fileIdsKeyを依存に変更
+  }, [fetchAllURLs]) // ✅ fetchAllURLsのみに依存（fileIdsKeyが変わると自動的に変わる）
 
   return {
     urlMap,

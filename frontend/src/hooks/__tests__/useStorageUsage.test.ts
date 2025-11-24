@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import {
   useStorageUsage,
   getStorageUsageColorClass,
@@ -254,7 +254,9 @@ describe('useStorageUsage', () => {
     })
 
     // refetch実行
-    await result.current.refetch()
+    await act(async () => {
+      await result.current.refetch()
+    })
 
     // Assert
     await waitFor(() => {
