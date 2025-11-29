@@ -1,0 +1,35 @@
+import { defineConfig } from 'vite'
+import { svelte } from '@sveltejs/vite-plugin-svelte'
+import path from 'path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [svelte()],
+  resolve: {
+    alias: {
+      $lib: path.resolve(__dirname, './src/lib'),
+    },
+  },
+  server: {
+    host: process.env.CI ? '0.0.0.0' : 'localhost',
+    port: parseInt(process.env.PORT || '5174'),
+    strictPort: false,
+    proxy: {
+      '/api': {
+        target: 'http://backend:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
+  define: {
+    global: 'globalThis',
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4174,
+  },
+})
