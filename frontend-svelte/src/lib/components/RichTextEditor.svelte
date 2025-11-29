@@ -1,0 +1,277 @@
+<script lang="ts">
+  import { onMount, onDestroy } from "svelte";
+  import { Editor } from "@tiptap/core";
+  import { Document } from "@tiptap/extension-document";
+  import { Paragraph } from "@tiptap/extension-paragraph";
+  import { Text } from "@tiptap/extension-text";
+  import { Bold } from "@tiptap/extension-bold";
+  import { Italic } from "@tiptap/extension-italic";
+  import { Strike } from "@tiptap/extension-strike";
+  import { Underline } from "@tiptap/extension-underline";
+  import { Color } from "@tiptap/extension-color";
+  import { Highlight } from "@tiptap/extension-highlight";
+  import { TextStyle } from "@tiptap/extension-text-style";
+  import { Link } from "@tiptap/extension-link";
+  import { HardBreak } from "@tiptap/extension-hard-break";
+  import { Dropcursor } from "@tiptap/extension-dropcursor";
+  import { Gapcursor } from "@tiptap/extension-gapcursor";
+  import Button from "$lib/components/ui/button.svelte";
+  import {
+    Bold as BoldIcon,
+    Italic as ItalicIcon,
+    Underline as UnderlineIcon,
+    Strikethrough,
+    Link as LinkIcon,
+  } from "lucide-svelte";
+  import {
+    normalizeContent,
+    getSelectionCoordinates,
+    hasSelection,
+  } from "$lib/utils/editorUtils";
+
+  // Props
+  let {
+    content = $bindable(""),
+    placeholder = "Start typing...",
+    onUpdate = $bindable<(content: string) => void>(() => {}),
+    onFocus = $bindable<() => void>(() => {}),
+    onKeyDown = $bindable<
+      ((event: KeyboardEvent) => boolean | void) | undefined
+    >(undefined),
+    class: className = "",
+  } = $props();
+
+  // State
+  let editorElement: HTMLDivElement | null = $state(null);
+  let editor: Editor | null = $state(null);
+  let showToolbar = $state(false);
+  let toolbarPosition = $state({ top: 0, left: 0 });
+  let lastContent = $state("");
+  let isUpdating = $state(false);
+
+  /**
+   * テキスト選択時のツールバー表示処理
+   */
+  function handleSelectionUpdate() {
+    if (hasSelection() && editorElement) {
+      const coords = getSelectionCoordinates(editorElement);
+      if (coords) {
+        toolbarPosition = coords;
+        showToolbar = true;
+      }
+    } else {
+      showToolbar = false;
+    }
+  }
+
+  /**
+   * エディター初期化
+   */
+  onMount(() => {
+    if (!editorElement) return;
+
+    editor = new Editor({
+      element: editorElement,
+      extensions: [
+        Document,
+        Paragraph.configure({
+          HTMLAttributes: {
+            class: "outline-none leading-normal my-1 min-h-[1.5rem]",
+          },
+        }),
+        Text,
+        TextStyle,
+        Color.configure({
+          types: ["textStyle"],
+        }),
+        Highlight.configure({
+          multicolor: true,
+        }),
+        Link.configure({
+          openOnClick: false,
+          HTMLAttributes: {
+            class:
+              "text-blue-600 underline decoration-blue-600 hover:text-blue-700 cursor-pointer",
+            rel: "noopener noreferrer",
+          },
+        }),
+        Bold,
+        Italic,
+        Strike,
+        HardBreak,
+        Dropcursor,
+        Gapcursor,
+        Underline.configure({
+          HTMLAttributes: {
+            class:
+              "underline decoration-2 underline-offset-2 decoration-blue-500",
+          },
+        }),
+      ],
+      content: normalizeContent(content || ""),
+      autofocus: true,
+      editable: true,
+      onUpdate: ({ editor }: { editor: Editor }) => {
+        if (isUpdating) return;
+
+        try {
+          const json = editor.getJSON();
+          const jsonString = JSON.stringify(json);
+
+          if (jsonString !== lastContent) {
+            lastContent = jsonString;
+            onUpdate(jsonString);
+          }
+        } catch (error) {
+          console.debug("RichTextEditor update error:", error);
+        }
+      },
+      onSelectionUpdate: () => {
+        try {
+          handleSelectionUpdate();
+        } catch (error) {
+          console.debug("RichTextEditor selection update error:", error);
+        }
+      },
+      onFocus: () => {
+        onFocus();
+      },
+      onBlur: () => {
+        setTimeout(() => {
+          showToolbar = false;
+        }, 100);
+      },
+      editorProps: {
+        attributes: {
+          class:
+            "prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[2rem] leading-normal",
+          placeholder: placeholder,
+          spellcheck: "false",
+        },
+        handleKeyDown: (_view: any, event: KeyboardEvent) => {
+          if (onKeyDown) {
+            const result = onKeyDown(event);
+            if (result === false) {
+              return true;
+            }
+          }
+          return false;
+        },
+      },
+    });
+
+    return () => {
+      if (editor) {
+        editor.destroy();
+      }
+    };
+  });
+
+  /**
+   * コンテンツ同期
+   */
+  $effect(() => {
+    if (!editor || isUpdating) return;
+
+    const currentContent = JSON.stringify(editor.getJSON());
+    const incomingContent = content || "";
+
+    if (incomingContent === lastContent || incomingContent === currentContent) {
+      return;
+    }
+
+    if (editor.isFocused) {
+      return;
+    }
+
+    isUpdating = true;
+    try {
+      const normalizedContent = normalizeContent(incomingContent);
+      editor.commands.setContent(normalizedContent, { emitUpdate: false });
+      lastContent = incomingContent;
+    } catch (error) {
+      console.debug("Content sync error:", error);
+    } finally {
+      setTimeout(() => {
+        isUpdating = false;
+      }, 50);
+    }
+  });
+
+  /**
+   * ツールバーアクション
+   */
+  function toggleBold() {
+    editor?.chain().focus().toggleBold().run();
+  }
+
+  function toggleItalic() {
+    editor?.chain().focus().toggleItalic().run();
+  }
+
+  function toggleUnderline() {
+    editor?.chain().focus().toggleUnderline().run();
+  }
+
+  function toggleStrike() {
+    editor?.chain().focus().toggleStrike().run();
+  }
+
+  function isFormatActive(format: string): boolean {
+    return editor?.isActive(format) ?? false;
+  }
+
+  onDestroy(() => {
+    if (editor) {
+      editor.destroy();
+    }
+  });
+</script>
+
+<div class="relative">
+  <!-- メインエディター -->
+  <div bind:this={editorElement} class={`relative ${className}`}></div>
+
+  <!-- フローティングツールバー -->
+  {#if showToolbar}
+    <div
+      class="absolute z-10 bg-white border border-gray-200 rounded shadow-lg p-1 flex space-x-1"
+      style:top={`${toolbarPosition.top}px`}
+      style:left={`${toolbarPosition.left}px`}
+      data-toolbar
+    >
+      <Button
+        size="sm"
+        variant={isFormatActive("bold") ? "default" : "ghost"}
+        onclick={toggleBold}
+        class="h-6 w-6 p-1"
+      >
+        <BoldIcon class="h-3 w-3" />
+      </Button>
+      <Button
+        size="sm"
+        variant={isFormatActive("italic") ? "default" : "ghost"}
+        onclick={toggleItalic}
+        class="h-6 w-6 p-1"
+      >
+        <ItalicIcon class="h-3 w-3" />
+      </Button>
+      <Button
+        size="sm"
+        variant={isFormatActive("underline") ? "default" : "ghost"}
+        onclick={toggleUnderline}
+        class="h-6 w-6 p-1"
+      >
+        <UnderlineIcon class="h-3 w-3" />
+      </Button>
+      <Button
+        size="sm"
+        variant={isFormatActive("strike") ? "default" : "ghost"}
+        onclick={toggleStrike}
+        class="h-6 w-6 p-1"
+      >
+        <Strikethrough class="h-3 w-3" />
+      </Button>
+    </div>
+  {/if}
+</div>
