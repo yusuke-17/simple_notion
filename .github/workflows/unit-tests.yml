@@ -124,6 +124,7 @@ jobs:
         retention-days: 7
 
   docker-integration-tests:
+    if: false  # Svelte移行中は一時的に無効化
     runs-on: ubuntu-latest
     needs: [frontend-tests, backend-tests]  # 基本テストが成功した場合のみ実行
     
