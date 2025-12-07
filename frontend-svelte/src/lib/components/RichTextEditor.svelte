@@ -15,14 +15,7 @@
   import { HardBreak } from "@tiptap/extension-hard-break";
   import { Dropcursor } from "@tiptap/extension-dropcursor";
   import { Gapcursor } from "@tiptap/extension-gapcursor";
-  import Button from "$lib/components/ui/button.svelte";
-  import {
-    Bold as BoldIcon,
-    Italic as ItalicIcon,
-    Underline as UnderlineIcon,
-    Strikethrough,
-    Link as LinkIcon,
-  } from "lucide-svelte";
+  import FloatingToolbar from "$lib/components/FloatingToolbar.svelte";
   import {
     normalizeContent,
     getSelectionCoordinates,
@@ -217,6 +210,32 @@
     editor?.chain().focus().toggleStrike().run();
   }
 
+  function setTextColor(color: string) {
+    if (color === "") {
+      editor?.chain().focus().unsetColor().run();
+    } else {
+      editor?.chain().focus().setColor(color).run();
+    }
+  }
+
+  function setHighlightColor(color: string) {
+    if (color === "") {
+      editor?.chain().focus().unsetHighlight().run();
+    } else {
+      editor?.chain().focus().setHighlight({ color }).run();
+    }
+  }
+
+  function setLink(url: string) {
+    if (url) {
+      editor?.chain().focus().setLink({ href: url, target: "_blank" }).run();
+    }
+  }
+
+  function removeLink() {
+    editor?.chain().focus().unsetLink().run();
+  }
+
   function isFormatActive(format: string): boolean {
     return editor?.isActive(format) ?? false;
   }
@@ -234,44 +253,16 @@
 
   <!-- フローティングツールバー -->
   {#if showToolbar}
-    <div
-      class="absolute z-10 bg-white border border-gray-200 rounded shadow-lg p-1 flex space-x-1"
-      style:top={`${toolbarPosition.top}px`}
-      style:left={`${toolbarPosition.left}px`}
-      data-toolbar
-    >
-      <Button
-        size="sm"
-        variant={isFormatActive("bold") ? "default" : "ghost"}
-        onclick={toggleBold}
-        class="h-6 w-6 p-1"
-      >
-        <BoldIcon class="h-3 w-3" />
-      </Button>
-      <Button
-        size="sm"
-        variant={isFormatActive("italic") ? "default" : "ghost"}
-        onclick={toggleItalic}
-        class="h-6 w-6 p-1"
-      >
-        <ItalicIcon class="h-3 w-3" />
-      </Button>
-      <Button
-        size="sm"
-        variant={isFormatActive("underline") ? "default" : "ghost"}
-        onclick={toggleUnderline}
-        class="h-6 w-6 p-1"
-      >
-        <UnderlineIcon class="h-3 w-3" />
-      </Button>
-      <Button
-        size="sm"
-        variant={isFormatActive("strike") ? "default" : "ghost"}
-        onclick={toggleStrike}
-        class="h-6 w-6 p-1"
-      >
-        <Strikethrough class="h-3 w-3" />
-      </Button>
-    </div>
+    <FloatingToolbar
+      position={toolbarPosition}
+      {toggleBold}
+      {toggleItalic}
+      {toggleUnderline}
+      {toggleStrike}
+      {setTextColor}
+      {setHighlightColor}
+      {setLink}
+      {removeLink}
+    />
   {/if}
 </div>

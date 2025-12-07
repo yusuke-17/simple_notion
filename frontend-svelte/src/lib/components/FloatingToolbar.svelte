@@ -8,6 +8,7 @@
     Link as LinkIcon,
   } from "lucide-svelte";
   import Button from "$lib/components/ui/button.svelte";
+  import ColorPalette from "$lib/components/ui/ColorPalette.svelte";
 
   let {
     position,
@@ -32,24 +33,26 @@
   } = $props();
 
   let showColorPalette = $state(false);
+  let currentPaletteType = $state<"text" | "highlight">("text");
 
-  // カラーパレット
-  const textColors = [
-    { name: "Black", value: "#000000" },
-    { name: "Red", value: "#EF4444" },
-    { name: "Blue", value: "#3B82F6" },
-    { name: "Green", value: "#10B981" },
-    { name: "Yellow", value: "#F59E0B" },
-    { name: "Purple", value: "#8B5CF6" },
-  ];
+  /**
+   * カラーパレットを開く
+   */
+  function openColorPalette(type: "text" | "highlight") {
+    currentPaletteType = type;
+    showColorPalette = true;
+  }
 
-  const highlightColors = [
-    { name: "Yellow", value: "#FEF08A" },
-    { name: "Green", value: "#BBF7D0" },
-    { name: "Blue", value: "#BFDBFE" },
-    { name: "Pink", value: "#FBCFE8" },
-    { name: "Orange", value: "#FED7AA" },
-  ];
+  /**
+   * カラー選択時の処理
+   */
+  function handleColorSelect(color: string) {
+    if (currentPaletteType === "text") {
+      setTextColor(color);
+    } else {
+      setHighlightColor(color);
+    }
+  }
 
   function handleSetLink() {
     const url = prompt("リンクURL:");
@@ -105,43 +108,19 @@
     <Button
       variant="ghost"
       size="sm"
-      onclick={() => (showColorPalette = !showColorPalette)}
+      onclick={() => openColorPalette("text")}
       class="text-white hover:bg-gray-700"
     >
       <Palette class="h-4 w-4" />
     </Button>
 
     {#if showColorPalette}
-      <div
-        class="absolute top-full mt-2 left-0 bg-white text-black rounded-lg shadow-xl p-3 min-w-[200px]"
-      >
-        <div class="mb-3">
-          <p class="text-xs font-semibold mb-2">テキスト色</p>
-          <div class="flex gap-2">
-            {#each textColors as color}
-              <button
-                class="w-6 h-6 rounded border-2 border-gray-300 hover:scale-110 transition-transform"
-                style="background-color: {color.value}"
-                onclick={() => setTextColor(color.value)}
-                title={color.name}
-              ></button>
-            {/each}
-          </div>
-        </div>
-
-        <div>
-          <p class="text-xs font-semibold mb-2">背景色</p>
-          <div class="flex gap-2">
-            {#each highlightColors as color}
-              <button
-                class="w-6 h-6 rounded border-2 border-gray-300 hover:scale-110 transition-transform"
-                style="background-color: {color.value}"
-                onclick={() => setHighlightColor(color.value)}
-                title={color.name}
-              ></button>
-            {/each}
-          </div>
-        </div>
+      <div class="absolute top-full mt-2 left-0">
+        <ColorPalette
+          type={currentPaletteType}
+          onColorSelect={handleColorSelect}
+          onClose={() => (showColorPalette = false)}
+        />
       </div>
     {/if}
   </div>
