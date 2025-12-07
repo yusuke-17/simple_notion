@@ -4,6 +4,7 @@
   import Login from "$lib/components/Login.svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import DocumentEditor from "$lib/components/DocumentEditor.svelte";
+  import ReadOnlyDocumentViewer from "$lib/components/ReadOnlyDocumentViewer.svelte";
   import { authStore } from "$lib/stores/auth.svelte";
 
   // State
@@ -121,16 +122,7 @@
         <div class="flex-1 overflow-auto">
           {#if currentDocumentId}
             {#if isReadOnly}
-              <div class="flex items-center justify-center h-full">
-                <div class="text-center">
-                  <p class="text-gray-600 mb-2">
-                    このドキュメントは読み取り専用です
-                  </p>
-                  <p class="text-sm text-gray-500">
-                    ゴミ箱から復元するか、別のドキュメントを選択してください
-                  </p>
-                </div>
-              </div>
+              <ReadOnlyDocumentViewer documentId={currentDocumentId} />
             {:else}
               <DocumentEditor documentId={currentDocumentId} />
             {/if}
