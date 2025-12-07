@@ -25,7 +25,6 @@
       () => {}
     ),
     onFocus = $bindable<(id: number) => void>(() => {}),
-    dragHandleProps = $bindable<Record<string, unknown>>({}),
   } = $props();
 
   // State
@@ -178,7 +177,8 @@
     </button>
     <button
       class="h-8 w-8 flex items-center justify-center rounded-md cursor-grab hover:bg-gray-100 transition-colors duration-150 border border-transparent hover:border-gray-200 active:cursor-grabbing"
-      {...dragHandleProps}
+      aria-label="Drag to reorder"
+      data-id={block.id}
       title="Drag to move"
     >
       <GripVertical class="h-4 w-4 text-gray-400 hover:text-gray-600" />

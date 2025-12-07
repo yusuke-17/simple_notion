@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
+  import { dndzone, TRIGGERS } from "svelte-dnd-action";
   import Input from "$lib/components/ui/input.svelte";
   import BlockEditor from "$lib/components/BlockEditor.svelte";
   import type { Block, Document as DocumentType } from "$lib/types";
@@ -187,6 +188,36 @@
   function handleBlockFocus(_id: number) {
     // 将来的なフォーカス管理用
   }
+
+  /**
+   * ドラッグ&ドロップ - consider段階（ドラッグ中）
+   */
+  function handleDndConsider(
+    e: CustomEvent<{ items: Block[]; info: { trigger: string } }>
+  ) {
+    blocks = e.detail.items;
+  }
+
+  /**
+   * ドラッグ&ドロップ - finalize段階（ドロップ完了）
+   */
+  function handleDndFinalize(
+    e: CustomEvent<{ items: Block[]; info: { trigger: string } }>
+  ) {
+    blocks = e.detail.items.map((block, index) => ({
+      ...block,
+      position: index,
+    }));
+    scheduleAutoSave();
+  }
+
+  /**
+   * ドラッグ中のアニメーション設定
+   */
+  const dndOptions = {
+    flipDurationMs: 200,
+    dropTargetStyle: {},
+  };
 </script>
 
 {#if isLoading}
@@ -219,7 +250,17 @@
 
     <!-- エディター -->
     <div class="flex-1 p-4 pl-20">
-      <div class="max-w-4xl">
+      <div
+        class="max-w-4xl"
+        use:dndzone={{
+          items: blocks,
+          flipDurationMs: 200,
+          dropTargetStyle: {},
+          dragDisabled: false,
+        }}
+        onconsider={handleDndConsider}
+        onfinalize={handleDndFinalize}
+      >
         {#each blocks as block (block.id)}
           <BlockEditor
             {block}
@@ -227,7 +268,6 @@
             onDelete={handleBlockDelete}
             onAddBlock={handleAddBlock}
             onFocus={handleBlockFocus}
-            dragHandleProps={{}}
           />
         {/each}
       </div>
