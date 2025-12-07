@@ -16,6 +16,23 @@ class AuthStore {
   }
 
   /**
+   * エラーレスポンスをパースする
+   * JSONパースに失敗した場合はテキストをそのまま返す
+   */
+  private async parseErrorResponse(response: Response): Promise<string> {
+    try {
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        const error = await response.json()
+        return error.error || error.message || response.statusText
+      }
+      return await response.text() || response.statusText
+    } catch {
+      return response.statusText
+    }
+  }
+
+  /**
    * 認証状態をチェック
    */
   async checkAuth() {
@@ -53,8 +70,8 @@ class AuthStore {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'ログインに失敗しました')
+        const errorMessage = await this.parseErrorResponse(response)
+        throw new Error(errorMessage || 'ログインに失敗しました')
       }
 
       const data = await response.json()
@@ -93,8 +110,8 @@ class AuthStore {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || '登録に失敗しました')
+        const errorMessage = await this.parseErrorResponse(response)
+        throw new Error(errorMessage || '登録に失敗しました')
       }
 
       const data = await response.json()

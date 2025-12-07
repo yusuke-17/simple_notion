@@ -54,9 +54,12 @@
   async function loadTrashedDocuments() {
     loading = true;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/documents/deleted`, {
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/documents?deleted=true`,
+        {
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to load trashed documents");

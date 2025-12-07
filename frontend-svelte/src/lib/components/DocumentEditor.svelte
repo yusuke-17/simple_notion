@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { untrack } from "svelte";
   import Input from "$lib/components/ui/input.svelte";
   import BlockEditor from "$lib/components/BlockEditor.svelte";
   import type { Block, Document as DocumentType } from "$lib/types";
@@ -16,22 +16,20 @@
   let blocks = $state<Block[]>([]);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
-  let saveTimeout: ReturnType<typeof setTimeout> | null = $state(null);
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+  let lastLoadedDocumentId: number | null = null;
 
   /**
    * ドキュメントを読み込み
    */
-  async function loadDocument() {
+  async function loadDocument(docId: number) {
     isLoading = true;
     error = null;
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/documents/${documentId}`,
-        {
-          credentials: "include",
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/documents/${docId}`, {
+        credentials: "include",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to load document");
@@ -51,12 +49,14 @@
             id: Date.now(),
             type: "text",
             content: "",
-            documentId,
+            documentId: docId,
             position: 0,
             createdAt: new Date().toISOString(),
           },
         ];
       }
+
+      lastLoadedDocumentId = docId;
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to load document";
       console.error("Failed to load document:", err);
@@ -64,6 +64,22 @@
       isLoading = false;
     }
   }
+
+  // documentIdの変更を監視してドキュメントを再読み込み
+  $effect(() => {
+    const currentDocId = documentId;
+
+    untrack(() => {
+      if (currentDocId && currentDocId !== lastLoadedDocumentId) {
+        // 前のドキュメントの自動保存タイマーをクリア
+        if (saveTimeout) {
+          clearTimeout(saveTimeout);
+          saveTimeout = null;
+        }
+        loadDocument(currentDocId);
+      }
+    });
+  });
 
   /**
    * タイトル更新
@@ -171,11 +187,6 @@
   function handleBlockFocus(_id: number) {
     // 将来的なフォーカス管理用
   }
-
-  // 初期ロード
-  onMount(() => {
-    loadDocument();
-  });
 </script>
 
 {#if isLoading}

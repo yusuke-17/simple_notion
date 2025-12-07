@@ -19,7 +19,8 @@ export default defineConfig({
     strictPort: false,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_BASE_URL || 'http://localhost:8080',
+        // サーバーサイドプロキシ用の環境変数を優先使用
+        target: process.env.VITE_API_PROXY_TARGET || process.env.VITE_API_BASE_URL || 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
       },
