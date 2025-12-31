@@ -126,9 +126,8 @@ func (r *Router) setupProtectedRoutes() {
 	// 認証関連
 	api.HandleFunc("/auth/me", r.authHandler.Me).Methods("GET")
 
-	// ファイルアップロード関連
+	// ファイルアップロード関連（画像のみサポート）
 	api.HandleFunc("/upload/image", r.uploadHandler.UploadImage).Methods("POST", "OPTIONS")
-	api.HandleFunc("/upload/file", r.uploadHandler.UploadFile).Methods("POST", "OPTIONS")
 	api.HandleFunc("/files/{id:[0-9]+}/url", r.uploadHandler.GetPresignedURL).Methods("GET")
 	api.HandleFunc("/storage/usage", r.uploadHandler.GetStorageUsage).Methods("GET")
 

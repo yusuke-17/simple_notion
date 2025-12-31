@@ -134,61 +134,6 @@ func (s *FileService) UploadImage(
 	return fileMeta, presignedURL, nil
 }
 
-// UploadFile は 一般ファイルをアップロードします
-func (s *FileService) UploadFile(
-	ctx context.Context,
-	userID int,
-	file multipart.File,
-	header *multipart.FileHeader,
-) (*models.FileMetadata, string, error) {
-	// 1. ファイルサイズのバリデーション
-	if header.Size > s.maxFileSize {
-		return nil, "", fmt.Errorf("file size exceeds maximum allowed size of %d bytes", s.maxFileSize)
-	}
-
-	// 2. MIMEタイプのバリデーション
-	contentType := header.Header.Get("Content-Type")
-	if !isValidFileType(contentType) {
-		return nil, "", fmt.Errorf("invalid file type: %s", contentType)
-	}
-
-	// 3. 一意なファイルキーを生成
-	fileKey := generateFileKey(userID, header.Filename, "files")
-
-	// 4. MinIOにアップロード
-	err := s.s3Client.UploadFile(ctx, fileKey, file, header.Size, contentType)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to upload file to S3: %w", err)
-	}
-
-	// 5. メタデータをデータベースに保存
-	fileMeta := &models.FileMetadata{
-		UserID:       userID,
-		FileKey:      fileKey,
-		BucketName:   s.s3Client.GetBucketName(),
-		OriginalName: header.Filename,
-		FileSize:     header.Size,
-		MimeType:     contentType,
-		FileType:     "file",
-		Status:       "active",
-	}
-
-	err = s.fileRepo.Create(ctx, fileMeta)
-	if err != nil {
-		// アップロード済みのファイルを削除
-		_ = s.s3Client.DeleteFile(ctx, fileKey)
-		return nil, "", fmt.Errorf("failed to save file metadata: %w", err)
-	}
-
-	// 6. 署名付きURLを生成
-	presignedURL, err := s.s3Client.GetPresignedURL(ctx, fileKey, time.Duration(s.presignExpiry)*time.Second)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to generate presigned URL: %w", err)
-	}
-
-	return fileMeta, presignedURL, nil
-}
-
 // GetPresignedURL は ファイルの署名付きURLを取得します
 func (s *FileService) GetPresignedURL(ctx context.Context, fileID int, userID int) (string, error) {
 	// 1. ファイルメタデータを取得
@@ -448,37 +393,6 @@ func isValidImageType(contentType string) bool {
 		"image/png":  true,
 		"image/webp": true,
 		"image/gif":  true,
-	}
-	return validTypes[strings.ToLower(contentType)]
-}
-
-// isValidFileType は ファイルのMIMEタイプをバリデーションします
-func isValidFileType(contentType string) bool {
-	validTypes := map[string]bool{
-		// PDF
-		"application/pdf": true,
-		// Microsoft Office (新形式)
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":   true, // .docx
-		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         true, // .xlsx
-		"application/vnd.openxmlformats-officedocument.presentationml.presentation": true, // .pptx
-		// Microsoft Office (旧形式)
-		"application/msword":            true, // .doc
-		"application/vnd.ms-excel":      true, // .xls
-		"application/vnd.ms-powerpoint": true, // .ppt
-		// テキストファイル
-		"text/plain": true, // .txt
-		// 圧縮ファイル
-		"application/zip":              true, // .zip
-		"application/x-rar-compressed": true, // .rar
-		"application/x-7z-compressed":  true, // .7z
-		"application/x-tar":            true, // .tar
-		"application/gzip":             true, // .gz
-		// その他
-		"application/json": true, // .json
-		"text/csv":         true, // .csv
-		"application/xml":  true, // .xml
-		"text/xml":         true, // .xml
-		"application/rtf":  true, // .rtf
 	}
 	return validTypes[strings.ToLower(contentType)]
 }

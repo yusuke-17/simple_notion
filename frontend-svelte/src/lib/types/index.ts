@@ -28,7 +28,7 @@ export interface Document {
 export interface Block {
   id: number
   type: string
-  content: string | ImageBlockContent | FileBlockContent // Allow object types for image/file blocks
+  content: string | ImageBlockContent // Allow object types for image blocks
   documentId: number
   position: number // Changed from 'order' to match backend
   createdAt: string
@@ -79,23 +79,6 @@ export interface ImageBlockContent {
   status?: 'active' | 'deleted' | 'orphaned' // ファイルステータス
 }
 
-// File block specific types (PDF, Word, Excel等)
-export interface FileBlockContent {
-  filename: string // ファイル名
-  fileSize: number // ファイルサイズ（バイト）
-  mimeType: string // MIMEタイプ
-  uploadedAt: string // アップロード日時
-  downloadUrl: string // ダウンロードURL
-  previewUrl?: string // プレビューURL（PDF等）
-  originalName?: string // 元のファイル名（ユーザーが見やすい名前）
-  // MinIO関連フィールド
-  fileKey?: string // MinIO内部キー
-  fileId?: number // file_metadata.id
-  bucketName?: string // MinIOバケット名
-  status?: 'active' | 'deleted' | 'orphaned' // ファイルステータス
-  fileType?: 'file' // ファイルタイプ（固定値）
-}
-
 // Upload related types
 export interface UploadResponse {
   success: boolean
@@ -104,11 +87,6 @@ export interface UploadResponse {
   url?: string
   message?: string
   fileKey?: string // MinIO内部キー（フロントで補完する可能性）
-}
-
-export interface FileUploadResponse extends UploadResponse {
-  mimeType?: string
-  fileSize?: number
 }
 
 export interface UploadError {
@@ -189,7 +167,7 @@ export interface FileMetadata {
   originalName: string // 元のファイル名
   fileSize: number // ファイルサイズ（バイト）
   mimeType: string // MIMEタイプ
-  fileType: 'image' | 'file' // ファイルタイプ区別
+  fileType: 'image' // ファイルタイプ（画像のみサポート）
   width?: number | null // 画像幅（画像のみ）
   height?: number | null // 画像高さ（画像のみ）
   uploadedAt: string // アップロード日時（ISO 8601形式）

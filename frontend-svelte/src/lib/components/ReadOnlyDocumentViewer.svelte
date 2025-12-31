@@ -5,22 +5,8 @@
     ReadOnlyDocumentViewerProps,
     Block,
     ImageBlockContent,
-    FileBlockContent,
   } from "$lib/types";
   import { createReadOnlyDocumentViewerStore } from "$lib/stores/useReadOnlyDocumentViewer.svelte";
-  import {
-    Download,
-    File,
-    FileText,
-    FileSpreadsheet,
-    FileCode,
-    FileArchive,
-  } from "lucide-svelte";
-  import {
-    getFileIconName,
-    formatFileSize,
-    getFileTypeName,
-  } from "$lib/utils/fileUploadUtils";
 
   /**
    * 読み取り専用ドキュメントビューアーコンポーネント
@@ -45,41 +31,12 @@
   });
 
   /**
-   * ファイルアイコンを取得
-   */
-  function getFileIcon(mimeType: string) {
-    const iconName = getFileIconName(mimeType);
-
-    switch (iconName) {
-      case "file-text":
-        return FileText;
-      case "file-spreadsheet":
-        return FileSpreadsheet;
-      case "file-code":
-        return FileCode;
-      case "file-archive":
-        return FileArchive;
-      default:
-        return File;
-    }
-  }
-
-  /**
    * 画像ブロックかどうかを判定
    */
   function isImageBlock(
     block: Block
   ): block is Block & { content: ImageBlockContent } {
     return block.type === "image" && typeof block.content === "object";
-  }
-
-  /**
-   * ファイルブロックかどうかを判定
-   */
-  function isFileBlock(
-    block: Block
-  ): block is Block & { content: FileBlockContent } {
-    return block.type === "file" && typeof block.content === "object";
   }
 
   /**
@@ -170,51 +127,6 @@
                         画像が見つかりません
                       </div>
                     {/if}
-                  </div>
-                  <!-- ファイルブロック -->
-                {:else if isFileBlock(block)}
-                  {@const fileContent = block.content}
-                  {@const FileIcon = getFileIcon(fileContent.mimeType)}
-                  <div
-                    class="my-4 border border-gray-200 rounded-lg p-4 bg-gray-50 max-w-xl"
-                  >
-                    <div class="flex items-start space-x-3">
-                      <!-- ファイルアイコン -->
-                      <div class="flex-shrink-0 mt-1">
-                        <FileIcon class="w-8 h-8 text-gray-400" />
-                      </div>
-
-                      <!-- ファイル情報 -->
-                      <div class="flex-1 min-w-0">
-                        <div class="font-medium text-gray-900 truncate">
-                          {fileContent.originalName || fileContent.filename}
-                        </div>
-                        <div class="text-sm text-gray-500 mt-1">
-                          {getFileTypeName(fileContent.mimeType)} •
-                          {formatFileSize(fileContent.fileSize)}
-                        </div>
-                        {#if fileContent.uploadedAt}
-                          <div class="text-xs text-gray-400 mt-1">
-                            アップロード日時: {new Date(
-                              fileContent.uploadedAt
-                            ).toLocaleString("ja-JP")}
-                          </div>
-                        {/if}
-                      </div>
-
-                      <!-- ダウンロードボタン -->
-                      {#if fileContent.downloadUrl}
-                        <a
-                          href={fileContent.downloadUrl}
-                          download={fileContent.originalName ||
-                            fileContent.filename}
-                          class="flex-shrink-0 p-2 hover:bg-gray-100 rounded-md transition-colors pointer-events-auto"
-                          title="ダウンロード"
-                        >
-                          <Download class="w-5 h-5 text-gray-600" />
-                        </a>
-                      {/if}
-                    </div>
                   </div>
                   <!-- その他のブロックタイプ -->
                 {:else}
