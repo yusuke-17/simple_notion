@@ -13,16 +13,22 @@ import {
 } from '$lib/utils/uploadUtils'
 
 // Mock fetch for upload tests
-global.fetch = vi.fn()
+const mockFetch = vi.fn()
+vi.stubGlobal('fetch', mockFetch)
 
 // Mock URL methods
-global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
-global.URL.revokeObjectURL = vi.fn()
+const mockCreateObjectURL = vi.fn(() => 'blob:mock-url')
+const mockRevokeObjectURL = vi.fn()
+vi.stubGlobal('URL', {
+  ...URL,
+  createObjectURL: mockCreateObjectURL,
+  revokeObjectURL: mockRevokeObjectURL,
+})
 
 describe('uploadUtils', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(fetch).mockClear()
+    mockFetch.mockClear()
   })
 
   describe('validateImageFile', () => {
@@ -88,7 +94,7 @@ describe('uploadUtils', () => {
         filename: 'test.jpg',
       }
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       } as Response)
@@ -100,7 +106,7 @@ describe('uploadUtils', () => {
       const result = await uploadImageFile(validFile)
 
       expect(result).toEqual(mockResponse)
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         UPLOAD_CONFIG.UPLOAD_ENDPOINT,
         expect.objectContaining({
           method: 'POST',
@@ -111,7 +117,7 @@ describe('uploadUtils', () => {
     })
 
     test('サーバーエラー時のエラーハンドリング', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         json: async () => ({ error: 'サーバーエラー' }),
       } as Response)
@@ -124,7 +130,7 @@ describe('uploadUtils', () => {
     })
 
     test('ネットワークエラー時のエラーハンドリング', async () => {
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
       const validFile = new File(['image content'], 'test.jpg', {
         type: 'image/jpeg',
@@ -321,8 +327,19 @@ describe('uploadUtils', () => {
   })
 
   describe('uploadImageFileWithProgress', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let mockXHR: any
+    let mockXHR: {
+      open: ReturnType<typeof vi.fn>
+      send: ReturnType<typeof vi.fn>
+      abort: ReturnType<typeof vi.fn>
+      setRequestHeader: ReturnType<typeof vi.fn>
+      upload: {
+        addEventListener: ReturnType<typeof vi.fn>
+      }
+      addEventListener: ReturnType<typeof vi.fn>
+      withCredentials: boolean
+      status: number
+      responseText: string
+    }
 
     beforeEach(() => {
       // XMLHttpRequestのモック
@@ -340,13 +357,15 @@ describe('uploadUtils', () => {
         responseText: '',
       }
 
-      // グローバルXMLHttpRequestを置き換え
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      global.XMLHttpRequest = vi.fn(() => mockXHR) as any
+      // コンストラクタとして使えるクラスでXMLHttpRequestをモック
+      const MockXMLHttpRequest = vi.fn(function (this: typeof mockXHR) {
+        Object.assign(this, mockXHR)
+      }) as unknown as typeof XMLHttpRequest
+      vi.stubGlobal('XMLHttpRequest', MockXMLHttpRequest)
     })
 
     afterEach(() => {
-      vi.restoreAllMocks()
+      vi.unstubAllGlobals()
     })
 
     test('正常にファイルをアップロードし、コントローラーを返す', () => {
@@ -365,7 +384,8 @@ describe('uploadUtils', () => {
         'POST',
         UPLOAD_CONFIG.UPLOAD_ENDPOINT
       )
-      expect(mockXHR.withCredentials).toBe(true)
+      // withCredentialsは実際のXHRインスタンスで設定されるため、controller.xhrから確認
+      expect(controller.xhr.withCredentials).toBe(true)
     })
 
     test('無効なファイルの場合、エラーコールバックが呼ばれる', () => {
