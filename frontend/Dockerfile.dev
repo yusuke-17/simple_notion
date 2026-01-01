@@ -1,4 +1,4 @@
-# Development Dockerfile for React + Vite
+# Development Dockerfile for Svelte 5 + Vite
 
 FROM node:24-alpine
 
@@ -30,8 +30,8 @@ RUN pnpm install --frozen-lockfile
 # Copy source code
 COPY --chown=nodejs:nodejs . .
 
-# Expose port 5173 for Vite dev server
-EXPOSE 5173
+# Expose port 5174 for Vite dev server (Svelte version)
+EXPOSE 5174
 
 # Start development server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["pnpm", "dev", "--", "--host", "0.0.0.0", "--port", "5174"]

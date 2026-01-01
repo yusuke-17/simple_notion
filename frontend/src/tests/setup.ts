@@ -1,10 +1,9 @@
 import '@testing-library/jest-dom'
-import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
 
-// テスト後にクリーンアップ
+// テスト後にクリーンアップ（Svelte用）
 afterEach(() => {
-  cleanup()
+  // Svelteのクリーンアップは@testing-library/svelteが自動処理
 })
 
 // モックの設定
@@ -17,7 +16,7 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 // matchMediaのモック
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,

@@ -1,4 +1,5 @@
-# Multi-stage build for React + Vite application
+# Multi-stage build for Svelte 5 + Vite application
+# 本番環境用Dockerfile
 
 # Build stage
 FROM node:24-alpine AS builder
@@ -9,10 +10,10 @@ WORKDIR /app
 RUN corepack enable
 RUN corepack prepare pnpm@latest --activate
 
-# Copy package files (pnpm uses package.json and pnpm-lock.yaml)
+# Copy package files
 COPY package.json pnpm-lock.yaml* ./
 
-# Install dependencies (including devDependencies needed for build)
+# Install dependencies
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
@@ -53,8 +54,7 @@ RUN mkdir -p /var/cache/nginx/{client_temp,proxy_temp,fastcgi_temp,uwsgi_temp,sc
 # Switch to non-root user
 USER nginx_user
 
-# Expose port 8080 (non-root user cannot bind to port 80)
+# Expose port 8080 (non-root users cannot bind to port 80)
 EXPOSE 8080
 
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"]

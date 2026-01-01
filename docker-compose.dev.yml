@@ -58,27 +58,32 @@ services:
     # 開発環境では自動再起動
     restart: unless-stopped
 
+  # Svelte 5 フロントエンド
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
-      - "5173:5173"
+      - "5174:5174"
     depends_on:
       - backend
     environment:
       NODE_ENV: development
-      VITE_API_BASE_URL: http://localhost:8080
+      # サーバーサイド（Viteプロキシ）用 - Dockerネットワーク内でバックエンドにアクセス
+      VITE_API_PROXY_TARGET: http://backend:8080
+      # クライアントサイド用 - 空文字列にして相対パス（/api）を使用
+      VITE_API_BASE_URL: ""
+      PORT: 5174
       # HMR (Hot Module Replacement) の設定
       VITE_HMR_HOST: localhost
-      VITE_HMR_PORT: 5173
+      VITE_HMR_PORT: 5174
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - node_cache:/root/.npm  # npm cache
     working_dir: /app
     # HMRのためのポート設定
-    command: npm run dev -- --host 0.0.0.0 --port 5173
+    command: pnpm dev --host 0.0.0.0 --port 5174
     # 開発環境では自動再起動
     restart: unless-stopped
 
@@ -92,7 +97,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
       # CORS設定を環境変数で指定
-      MINIO_API_CORS_ALLOW_ORIGIN: "http://localhost:5173,http://localhost:3000"
+      MINIO_API_CORS_ALLOW_ORIGIN: "http://localhost:5174,http://localhost:3000"
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
@@ -106,5 +111,5 @@ services:
 volumes:
   postgres_data:
   go_cache:  # Go modules cache volume
-  node_cache:  # npm cache volume
+  node_cache:  # npm cache volume (Svelte frontend)
   minio_data:  # MinIO data volume

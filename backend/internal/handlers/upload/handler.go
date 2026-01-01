@@ -178,61 +178,6 @@ func (h *UploadHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// UploadFile は ファイルアップロードハンドラー（PDF、Word、Excel等）
-func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
-	// ユーザーIDを取得（認証ミドルウェアで設定済み）
-	userID := middleware.GetUserIDFromContext(r.Context())
-	if userID == 0 {
-		sendErrorResponse(w, http.StatusUnauthorized, "Unauthorized", "User not authenticated")
-		return
-	}
-
-	// multipart/form-dataの解析（最大32MB）
-	err := r.ParseMultipartForm(32 << 20)
-	if err != nil {
-		sendErrorResponse(w, http.StatusBadRequest, "Invalid form data", err.Error())
-		return
-	}
-
-	// ファイルの取得
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		sendErrorResponse(w, http.StatusBadRequest, "No file uploaded", "Please select a file to upload")
-		return
-	}
-	defer file.Close()
-
-	// ストレージクォータチェック
-	err = h.fileService.CheckStorageQuota(r.Context(), userID, header.Size, h.userStorageQuota)
-	if err != nil {
-		sendErrorResponse(w, http.StatusRequestEntityTooLarge, "Storage quota exceeded", err.Error())
-		return
-	}
-
-	// ファイルアップロード
-	fileMeta, presignedURL, err := h.fileService.UploadFile(r.Context(), userID, file, header)
-	if err != nil {
-		sendErrorResponse(w, http.StatusInternalServerError, "Failed to upload file", err.Error())
-		return
-	}
-
-	// キャッシュに保存（TTL: 23時間）
-	h.setCachedURL(filepath.Base(fileMeta.FileKey), presignedURL, 23*time.Hour)
-
-	// 成功レスポンス（相対パスを返す）
-	response := UploadResponse{
-		Success:  true,
-		FileID:   fileMeta.ID,
-		Filename: fileMeta.OriginalName,
-		URL:      fmt.Sprintf("/api/uploads/%s", filepath.Base(fileMeta.FileKey)),
-		Message:  "File uploaded successfully",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
 // GetPresignedURL は ファイルの署名付きURLを取得するハンドラー
 func (h *UploadHandler) GetPresignedURL(w http.ResponseWriter, r *http.Request) {
 	// ユーザーIDを取得

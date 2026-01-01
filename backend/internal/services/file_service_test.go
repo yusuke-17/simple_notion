@@ -147,65 +147,6 @@ func TestFileService_IsValidImageType(t *testing.T) {
 	}
 }
 
-// TestFileService_IsValidFileType は isValidFileType 関数のテストです
-func TestFileService_IsValidFileType(t *testing.T) {
-	tests := []struct {
-		name        string
-		contentType string
-		expected    bool
-	}{
-		{
-			name:        "PDFファイル",
-			contentType: "application/pdf",
-			expected:    true,
-		},
-		{
-			name:        "Word文書（新形式）",
-			contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-			expected:    true,
-		},
-		{
-			name:        "Excel文書（新形式）",
-			contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-			expected:    true,
-		},
-		{
-			name:        "テキストファイル",
-			contentType: "text/plain",
-			expected:    true,
-		},
-		{
-			name:        "ZIPファイル",
-			contentType: "application/zip",
-			expected:    true,
-		},
-		{
-			name:        "無効なタイプ（画像）",
-			contentType: "image/jpeg",
-			expected:    false,
-		},
-		{
-			name:        "無効なタイプ（動画）",
-			contentType: "video/mp4",
-			expected:    false,
-		},
-		{
-			name:        "空の文字列",
-			contentType: "",
-			expected:    false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isValidFileType(tt.contentType)
-			if result != tt.expected {
-				t.Errorf("isValidFileType(%q) = %v, want %v", tt.contentType, result, tt.expected)
-			}
-		})
-	}
-}
-
 // TestFileService_CleanupOrphanedFiles は CleanupOrphanedFiles メソッドの基本的なテストです
 func TestFileService_CleanupOrphanedFiles(t *testing.T) {
 	// このテストは実際のデータベースとS3クライアントが必要なため、

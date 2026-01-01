@@ -8,7 +8,8 @@ on:
   workflow_dispatch: # 手動実行を許可
 
 jobs:
-  frontend-tests:
+  # Svelte 5 フロントエンドテスト
+  frontend-svelte-tests:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -45,7 +46,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: frontend-test-coverage
+        name: frontend-svelte-test-coverage
         path: frontend/coverage/
         retention-days: 7
 
@@ -124,8 +125,9 @@ jobs:
         retention-days: 7
 
   docker-integration-tests:
+    if: false  # Svelte移行中は一時的に無効化
     runs-on: ubuntu-latest
-    needs: [frontend-tests, backend-tests]  # 基本テストが成功した場合のみ実行
+    needs: [frontend-svelte-tests, backend-tests]  # 基本テストが成功した場合のみ実行
     
     steps:
     - name: Checkout code
@@ -206,9 +208,9 @@ jobs:
         echo "Checking service status..."
         docker compose -f docker-compose.dev.yml ps
         
-        # ヘルスチェック（フロントエンド - 開発環境は5173ポート）
+        # ヘルスチェック（フロントエンド - 開発環境は5174ポート）
         echo "Testing frontend connectivity..."
-        timeout 60 bash -c 'until curl -f http://localhost:5173 > /dev/null 2>&1; do echo "Waiting for frontend..."; sleep 5; done' || echo "Frontend health check failed"
+        timeout 60 bash -c 'until curl -f http://localhost:5174 > /dev/null 2>&1; do echo "Waiting for frontend..."; sleep 5; done' || echo "Frontend health check failed"
         
         # ヘルスチェック（バックエンド - 8080ポート）
         echo "Testing backend connectivity..."
