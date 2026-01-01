@@ -102,10 +102,9 @@ Svelte 5/TypeScript専用の開発規約です。フロントエンド作業時�
 
 ### React版について
 
-**本プロジェクトはSvelte 5に移行完了しています。**
+**本プロジェクトはSvelte 5に移行完了しています。React版は完全に削除されました。**
 
-- ✅ **Svelte 5**: 現在のメインフロントエンド（`frontend-svelte/`）
-- ❌ **React版**: 非推奨・アーカイブ済み（`frontend/`）
+- ✅ **Svelte 5**: 現在のメインフロントエンド（`frontend/`）
 
 新規開発や機能追加は必ずSvelte 5で行ってください。
 
@@ -137,7 +136,7 @@ cd simple_notion
 docker-compose -f docker-compose.dev.yml up -d
 
 # フロントエンド（Svelte）の起動
-cd frontend-svelte
+cd frontend
 pnpm install
 pnpm dev
 ```

@@ -5,13 +5,12 @@
 ## 技術スタック
 
 ### フロントエンド
-- **React v19.1** + **TypeScript 5.8**
+- **Svelte 5** + **TypeScript 5.9**
 - **Vite v7** (ビルドツール)
-- **pnpm v10.12.4+** (パッケージマネージャー)
-- **Tailwind CSS v4.1** + **Radix UI** (スタイリング・UIコンポーネント)
-- **TipTap v3.6** (リッチテキストエディター)
-- **Zustand v5** (状態管理)
-- **React Router v7** (ルーティング)
+- **pnpm** (パッケージマネージャー)
+- **Tailwind CSS v4** (スタイリング)
+- **TipTap v3** (リッチテキストエディター)
+- **Svelte 5 Runes** (状態管理)
 
 ### バックエンド
 - **Go 1.25** (フレームワークなし)
@@ -267,7 +266,7 @@ go run cmd/server/main.go
 ## アクセス
 
 ### 開発環境
-- **フロントエンド**: http://localhost:5173
+- **フロントエンド**: http://localhost:5174
 - **バックエンドAPI**: http://localhost:8080
 
 ### 本番環境
@@ -282,7 +281,7 @@ go run cmd/server/main.go
 | **Docker設定** | `docker-compose.dev.yml` | `docker-compose.yml` |
 | **フロントエンド** | Vite開発サーバー（HMR） | Nginx静的配信 |
 | **バックエンド** | Airホットリロード | 最適化済みバイナリ |
-| **ポート** | 5173（frontend）, 8080（backend） | 3000（frontend）, 8080（backend） |
+| **ポート** | 5174（frontend）, 8080（backend） | 3000（frontend）, 8080（backend） |
 | **環境変数** | `.env` | `.env.production` |
 
 ## API エンドポイント
@@ -327,14 +326,16 @@ go test ./...
 
 ```
 simple_notion/
-├── frontend/                # React + TypeScript（関数型分離設計）
+├── frontend/                # Svelte 5 + TypeScript（関数型分離設計）
 │   ├── src/
-│   │   ├── components/     # View層（UIレンダリング専用）
-│   │   ├── hooks/          # ビジネスロジック層
-│   │   ├── utils/          # 純粋関数層
-│   │   ├── stores/         # 状態管理 (Zustand)
-│   │   ├── types/          # TypeScript 型定義
-│   │   └── tests/          # テストファイル
+│   │   ├── lib/
+│   │   │   ├── components/  # View層（UIレンダリング専用）
+│   │   │   ├── stores/      # 状態管理 (Svelte 5 Runes)
+│   │   │   ├── utils/       # 純粋関数層
+│   │   │   └── types/       # TypeScript 型定義
+│   │   ├── tests/          # テストファイル
+│   │   ├── App.svelte      # ルートコンポーネント
+│   │   └── main.ts         # エントリーポイント
 │   └── package.json
 ├── backend/                # Go アプリケーション（Clean Architecture）
 │   ├── cmd/server/         # エントリーポイント
@@ -358,7 +359,7 @@ simple_notion/
 ## ⚡ 開発のポイント
 
 ### アーキテクチャ
-- **フロントエンド**: 関数型分離パターン（View↔Hook↔Utils）
+- **フロントエンド**: 関数型分離パターン（View↔Utils、Svelte 5 Runesによる状態管理）
 - **バックエンド**: Clean Architecture（Handler→Service→Repository）
 - **リアルタイム自動保存**: 最適化されたdebounce処理
 

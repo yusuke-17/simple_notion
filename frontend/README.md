@@ -1,69 +1,112 @@
-# React + TypeScript + Vite
+# Simple Notion - Svelte 5 Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Svelte 5で構築されたNotionクローンのフロントエンドです。
 
-Currently, two official plugins are available:
+## プロジェクト状況
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+**ステータス**: ✅ **本番稼働中**
 
-## Expanding the ESLint configuration
+### 技術スタック
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Svelte**: 5.43.8
+- **TypeScript**: 5.9.3
+- **Vite**: 7.2.4
+- **Tailwind CSS**: 4.1.17
+- **TipTap**: 3.11.1（リッチテキストエディター）
+- **Vitest**: 4.0.14
+- **Testing Library**: @testing-library/svelte 5.2.9
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 開発環境
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+### ローカル開発
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# 依存関係インストール
+pnpm install
+
+# 開発サーバー起動（ポート5174）
+pnpm dev
+
+# テスト実行
+pnpm test
+
+# カバレッジ確認
+pnpm coverage
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Docker開発
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# フロントエンドのみ起動
+docker compose -f docker-compose.dev.yml up frontend
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 全サービス起動
+docker compose -f docker-compose.dev.yml up
+
+# アクセス
+# Svelte版: http://localhost:5174
+# バックエンドAPI: http://localhost:8080
 ```
+
+## プロジェクト構造
+
+```
+frontend/
+├── src/
+│   ├── lib/
+│   │   ├── components/  # Svelteコンポーネント（UIレンダリング専用）
+│   │   ├── utils/       # 純粋関数ユーティリティ
+│   │   ├── types/       # TypeScript型定義
+│   │   └── stores/      # 状態管理（Svelte 5 Runes）
+│   ├── tests/           # テストセットアップ
+│   ├── App.svelte       # メインアプリケーション
+│   ├── main.ts          # エントリーポイント
+│   └── app.css          # グローバルスタイル（Tailwind CSS）
+├── vite.config.ts       # Vite設定（ポート5174、APIプロキシ）
+├── tailwind.config.js   # Tailwind CSS設定
+├── vitest.config.ts     # Vitest設定
+├── Dockerfile           # 本番用Docker設定
+└── Dockerfile.dev       # 開発用Docker設定
+```
+
+### ユーティリティライブラリ
+
+- `clsx` - クラス名結合
+- `tailwind-merge` - Tailwindクラスマージ
+- `class-variance-authority` - バリアント管理
+
+## Svelte 5 Runes
+
+本プロジェクトではSvelte 5の新しいRunes APIを採用しています。
+
+### 主要なRunes
+
+- `$state` - リアクティブな状態変数
+- `$derived` - 派生値（computed）
+- `$effect` - 副作用（useEffect相当）
+- `$props` - コンポーネントプロパティ
+- `$bindable` - 双方向バインディング
+
+### レガシーAPI（使用禁止）
+
+以下のレガシーAPIは使用しないでください:
+
+- ❌ `writable`, `readable`, `derived`（Svelte Store API）
+- ❌ `$:` reactive statements
+
+## テスト
+
+```bash
+# テスト実行
+pnpm test
+
+# ウォッチモード
+pnpm test:watch
+
+# カバレッジレポート
+pnpm test:coverage
+```
+
+---
+
+**最終更新**: 2025年12月31日

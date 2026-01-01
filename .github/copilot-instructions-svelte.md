@@ -225,7 +225,7 @@ let doubled = $derived(count * 2)
 ## プロジェクト構造
 
 ```
-frontend-svelte/
+frontend/
 ├── src/
 │   ├── lib/
 │   │   ├── components/          # Svelteコンポーネント

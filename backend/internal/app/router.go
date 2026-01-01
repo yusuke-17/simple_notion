@@ -148,7 +148,7 @@ func (r *Router) GetHandler(cfg *config.Config) http.Handler {
 	// CORS設定
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{
-			"http://localhost:5173", // Vite開発サーバー
+			"http://localhost:5174", // Vite開発サーバー（Svelte 5）
 			"http://localhost:3000", // 本番フロントエンド
 			"http://frontend:8080",  // Dockerコンテナ間通信
 		},
