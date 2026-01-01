@@ -199,7 +199,7 @@ describe('uploadUtils', () => {
 
       expect(mockEvent.preventDefault).toHaveBeenCalled()
       expect(mockEvent.stopPropagation).toHaveBeenCalled()
-      expect(mockEvent.dataTransfer.dropEffect).toBe('copy')
+      expect(mockEvent.dataTransfer!.dropEffect).toBe('copy')
     })
 
     test('onDrop処理 - 成功時', () => {

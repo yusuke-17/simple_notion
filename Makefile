@@ -14,12 +14,12 @@ drop:
 	docker compose -f docker-compose.dev.yml down --rmi all --volumes --remove-orphans
 	@echo "🧹 完全にクリーンアップしました！"
 
-# テスト実行（frontend-svelte + backend）
+# テスト実行（frontend + backend）
 test:
 	@echo "🧪 テストを実行中..."
 	@echo ""
 	@echo "=== Frontend (Svelte) ==="
-	cd frontend-svelte && pnpm vitest run
+	cd frontend && pnpm vitest run
 	@echo ""
 	@echo "=== Backend (Go) ==="
 	cd backend && go test ./...

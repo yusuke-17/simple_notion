@@ -10,7 +10,8 @@ import {
 } from '../minioUtils'
 
 // fetch APIのモック
-global.fetch = vi.fn()
+const mockFetch = vi.fn()
+vi.stubGlobal('fetch', mockFetch)
 
 describe('minioUtils', () => {
   beforeEach(() => {
@@ -27,7 +28,7 @@ describe('minioUtils', () => {
       const mockResponse = {
         url: 'https://minio.example.com/bucket/file.jpg?X-Amz-Signature=abc123',
       }
-      ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       })
@@ -37,7 +38,7 @@ describe('minioUtils', () => {
 
       // Assert
       expect(result).toBe(mockResponse.url)
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost:8080/api/files/123/url',
         expect.objectContaining({
           method: 'GET',
@@ -48,7 +49,7 @@ describe('minioUtils', () => {
 
     it('APIエラー時に適切なエラーをスローする', async () => {
       // Arrange
-      ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         statusText: 'Not Found',
         json: async () => ({ message: 'File not found' }),
@@ -60,9 +61,7 @@ describe('minioUtils', () => {
 
     it('ネットワークエラー時にエラーをスローする', async () => {
       // Arrange
-      ;(global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        new Error('Network error')
-      )
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
       // Act & Assert
       await expect(fetchPresignedURL(123)).rejects.toThrow('Network error')
