@@ -29,19 +29,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      minio:
-        condition: service_healthy
+      rustfs:
+        condition: service_started
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@db:5432/notion_app?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_TO_A_STRONG_RANDOM_KEY_IN_PRODUCTION}
       PORT: 8080
       GIN_MODE: debug
       ENVIRONMENT: development
-      # MinIO/S3 設定
-      S3_ENDPOINT: minio:9000
+      # RustFS/S3 設定
+      S3_ENDPOINT: rustfs:9000
       S3_EXTERNAL_ENDPOINT: localhost:9000
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin
+      S3_ACCESS_KEY: rustfsadmin
+      S3_SECRET_KEY: rustfsadmin
       S3_BUCKET_NAME: simple-notion-files
       S3_REGION: us-east-1
       S3_USE_SSL: "false"
@@ -87,29 +87,32 @@ services:
     # 開発環境では自動再起動
     restart: unless-stopped
 
-  # MinIO - S3互換オブジェクトストレージ
-  minio:
-    image: minio/minio:latest
+  # RustFS - S3互換オブジェクトストレージ
+  # https://rustfs.com/
+  # https://docs.rustfs.com/installation/docker/
+  rustfs:
+    image: rustfs/rustfs:1.0.0-alpha.76  # 安定版を固定
     ports:
       - "9000:9000"  # API
       - "9001:9001"  # Web Console
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-      # CORS設定を環境変数で指定
-      MINIO_API_CORS_ALLOW_ORIGIN: "http://localhost:5174,http://localhost:3000"
-    command: server /data --console-address ":9001"
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin
     volumes:
-      - minio_data:/data
+      - rustfs_data:/data
+      - rustfs_logs:/logs  # ログディレクトリ（公式推奨）
+    # 注意: RustFSにはmc（MinIO Client）がないため、HTTPエンドポイントでヘルスチェック
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9000/health/live"]
+      interval: 15s
       timeout: 5s
       retries: 5
+      start_period: 10s
     restart: unless-stopped
 
 volumes:
   postgres_data:
   go_cache:  # Go modules cache volume
   node_cache:  # npm cache volume (Svelte frontend)
-  minio_data:  # MinIO data volume
+  rustfs_data:  # RustFS data volume
+  rustfs_logs:  # RustFS logs volume
