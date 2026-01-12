@@ -121,7 +121,7 @@
   <div class="text-gray-400 italic py-2">Empty block</div>
   <!-- プレーンテキストの場合 -->
 {:else if !contentState.isValidJson}
-  <div class="whitespace-pre-wrap break-words py-2 text-gray-800">
+  <div class="whitespace-pre-wrap wrap-break-word py-2 text-gray-800">
     {contentState.parsed}
   </div>
   <!-- リッチテキスト（JSON）の場合 -->

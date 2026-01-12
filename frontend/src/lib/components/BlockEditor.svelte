@@ -225,7 +225,7 @@
 
   <!-- Block content -->
   <div class="flex items-start">
-    <div class="flex-1 min-h-[2rem]">
+    <div class="flex-1 min-h-8">
       {#if block.type === BLOCK_TYPES.HEADING1 || block.type === BLOCK_TYPES.HEADING2 || block.type === BLOCK_TYPES.HEADING3}
         <Input
           value={typeof block.content === 'string' ? block.content : ''}
@@ -244,7 +244,7 @@
             onUpdate={handleContentChange}
             onFocus={() => onFocus(block.id)}
             onKeyDown={handleRichTextKeyDown}
-            class="min-h-[2rem] w-full"
+            class="min-h-8 w-full"
           />
         </div>
       {:else if block.type === BLOCK_TYPES.IMAGE}
@@ -260,7 +260,7 @@
             initialContent={getImageContent()}
             onContentChange={handleImageContentChange}
             {placeholder}
-            class="min-h-[2rem] w-full"
+            class="min-h-8 w-full"
           />
         </div>
       {:else}

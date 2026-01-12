@@ -232,10 +232,6 @@
     }
   }
 
-  function removeLink() {
-    editor?.chain().focus().unsetLink().run()
-  }
-
   onDestroy(() => {
     if (editor) {
       editor.destroy()

@@ -94,7 +94,7 @@
               <div class="group relative">
                 <!-- テキストブロック -->
                 {#if block.type === 'text'}
-                  <div class="min-h-[2rem] select-text pointer-events-auto">
+                  <div class="min-h-8 select-text pointer-events-auto">
                     <ReadOnlyRichTextViewer content={getTextContent(block)} />
                   </div>
                   <!-- 画像ブロック -->
