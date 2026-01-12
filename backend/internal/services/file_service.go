@@ -8,6 +8,7 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"mime/multipart"
 	"path/filepath"
 	"regexp"
@@ -15,7 +16,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/minio/minio-go/v7"
 
 	"simple-notion-backend/internal/models"
 	"simple-notion-backend/internal/repository"
@@ -30,7 +30,7 @@ var (
 // FileService は ファイル管理のビジネスロジックを提供します
 type FileService struct {
 	fileRepo      *repository.FileRepository
-	s3Client      *storage.S3Client
+	objectStorage storage.ObjectStorage
 	maxFileSize   int64
 	presignExpiry int // 署名付きURLの有効期限（秒）
 }
@@ -38,13 +38,13 @@ type FileService struct {
 // NewFileService は 新しい FileService インスタンスを作成します
 func NewFileService(
 	fileRepo *repository.FileRepository,
-	s3Client *storage.S3Client,
+	objectStorage storage.ObjectStorage,
 	maxFileSize int64,
 	presignExpiry int,
 ) *FileService {
 	return &FileService{
 		fileRepo:      fileRepo,
-		s3Client:      s3Client,
+		objectStorage: objectStorage,
 		maxFileSize:   maxFileSize,
 		presignExpiry: presignExpiry,
 	}
@@ -98,17 +98,17 @@ func (s *FileService) UploadImage(
 	// 4. 一意なファイルキーを生成
 	fileKey := generateFileKey(userID, header.Filename, "images")
 
-	// 5. MinIOにアップロード
-	err = s.s3Client.UploadFile(ctx, fileKey, file, header.Size, contentType)
+	// 5. ストレージにアップロード
+	err = s.objectStorage.UploadFile(ctx, fileKey, file, header.Size, contentType)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to upload file to S3: %w", err)
+		return nil, "", fmt.Errorf("failed to upload file to storage: %w", err)
 	}
 
 	// 6. メタデータをデータベースに保存
 	fileMeta := &models.FileMetadata{
 		UserID:       userID,
 		FileKey:      fileKey,
-		BucketName:   s.s3Client.GetBucketName(),
+		BucketName:   s.objectStorage.GetBucketName(),
 		OriginalName: header.Filename,
 		FileSize:     header.Size,
 		MimeType:     contentType,
@@ -121,12 +121,12 @@ func (s *FileService) UploadImage(
 	err = s.fileRepo.Create(ctx, fileMeta)
 	if err != nil {
 		// アップロード済みのファイルを削除
-		_ = s.s3Client.DeleteFile(ctx, fileKey)
+		_ = s.objectStorage.DeleteFile(ctx, fileKey)
 		return nil, "", fmt.Errorf("failed to save file metadata: %w", err)
 	}
 
 	// 7. 署名付きURLを生成
-	presignedURL, err := s.s3Client.GetPresignedURL(ctx, fileKey, time.Duration(s.presignExpiry)*time.Second)
+	presignedURL, err := s.objectStorage.GetPresignedURL(ctx, fileKey, time.Duration(s.presignExpiry)*time.Second)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to generate presigned URL: %w", err)
 	}
@@ -153,7 +153,7 @@ func (s *FileService) GetPresignedURL(ctx context.Context, fileID int, userID in
 	}
 
 	// 4. 署名付きURLを生成
-	presignedURL, err := s.s3Client.GetPresignedURL(ctx, fileMeta.FileKey, time.Duration(s.presignExpiry)*time.Second)
+	presignedURL, err := s.objectStorage.GetPresignedURL(ctx, fileMeta.FileKey, time.Duration(s.presignExpiry)*time.Second)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
 	}
@@ -180,7 +180,7 @@ func (s *FileService) GetPresignedURLByFileKey(ctx context.Context, fileKey stri
 	}
 
 	// 4. 署名付きURLを生成
-	presignedURL, err := s.s3Client.GetPresignedURL(ctx, fileMeta.FileKey, time.Duration(s.presignExpiry)*time.Second)
+	presignedURL, err := s.objectStorage.GetPresignedURL(ctx, fileMeta.FileKey, time.Duration(s.presignExpiry)*time.Second)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
 	}
@@ -203,7 +203,7 @@ func (s *FileService) GetPresignedURLByFilename(ctx context.Context, filename st
 	}
 
 	// 3. 署名付きURLを生成
-	presignedURL, err := s.s3Client.GetPresignedURL(ctx, fileMeta.FileKey, time.Duration(s.presignExpiry)*time.Second)
+	presignedURL, err := s.objectStorage.GetPresignedURL(ctx, fileMeta.FileKey, time.Duration(s.presignExpiry)*time.Second)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
 	}
@@ -225,11 +225,12 @@ func (s *FileService) GetFileMetadataByFilename(ctx context.Context, filename st
 	return fileMeta, nil
 }
 
-// GetFileObject は MinIOからファイルオブジェクトを取得します
-func (s *FileService) GetFileObject(ctx context.Context, fileKey string) (*minio.Object, error) {
-	object, err := s.s3Client.GetObject(ctx, fileKey)
+// GetFileObject は ストレージからファイルオブジェクトを取得します
+// 戻り値のio.ReadCloserは呼び出し側でCloseする必要があります
+func (s *FileService) GetFileObject(ctx context.Context, fileKey string) (io.ReadCloser, error) {
+	object, err := s.objectStorage.GetObject(ctx, fileKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get object from S3: %w", err)
+		return nil, fmt.Errorf("failed to get object from storage: %w", err)
 	}
 
 	return object, nil
@@ -254,12 +255,12 @@ func (s *FileService) DeleteFile(ctx context.Context, fileID int, userID int) er
 		return fmt.Errorf("failed to mark file as deleted: %w", err)
 	}
 
-	// 4. MinIOから削除（非同期で行う方が良いが、ここでは同期的に実行）
+	// 4. ストレージから削除（非同期で行う方が良いが、ここでは同期的に実行）
 	// 本番環境では、後でクリーンアップジョブで削除する方が安全
-	err = s.s3Client.DeleteFile(ctx, fileMeta.FileKey)
+	err = s.objectStorage.DeleteFile(ctx, fileMeta.FileKey)
 	if err != nil {
 		// ログに記録するが、エラーは返さない（メタデータの削除は成功しているため）
-		// log.Printf("Warning: failed to delete file from S3: %v", err)
+		// log.Printf("Warning: failed to delete file from storage: %v", err)
 	}
 
 	return nil
@@ -275,11 +276,11 @@ func (s *FileService) CleanupOrphanedFiles(ctx context.Context) error {
 
 	// 2. 各ファイルを処理
 	for _, file := range orphanedFiles {
-		// MinIOから削除
-		err := s.s3Client.DeleteFile(ctx, file.FileKey)
+		// ストレージから削除
+		err := s.objectStorage.DeleteFile(ctx, file.FileKey)
 		if err != nil {
 			// ログに記録して続行
-			// log.Printf("Warning: failed to delete orphaned file from S3: %v", err)
+			// log.Printf("Warning: failed to delete orphaned file from storage: %v", err)
 			continue
 		}
 

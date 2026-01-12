@@ -13,12 +13,16 @@ import (
 )
 
 // S3Client は MinIO/S3 クライアントをラップした構造体です
+// ObjectStorage インターフェースを実装しています
 type S3Client struct {
 	client           *minio.Client
 	bucketName       string
 	region           string
 	externalEndpoint string // ブラウザからアクセス可能なエンドポイント
 }
+
+// コンパイル時にObjectStorageインターフェースを満たすことを確認
+var _ ObjectStorage = (*S3Client)(nil)
 
 // NewS3Client は 新しい S3Client インスタンスを作成します
 func NewS3Client(endpoint, accessKey, secretKey, bucketName, region string, useSSL bool, externalEndpoint string) (*S3Client, error) {
@@ -92,7 +96,8 @@ func (s *S3Client) UploadFile(ctx context.Context, fileKey string, reader io.Rea
 }
 
 // GetObject は MinIO/S3 からファイルを取得します
-func (s *S3Client) GetObject(ctx context.Context, fileKey string) (*minio.Object, error) {
+// 戻り値のio.ReadCloserは呼び出し側でCloseする必要があります
+func (s *S3Client) GetObject(ctx context.Context, fileKey string) (io.ReadCloser, error) {
 	object, err := s.client.GetObject(ctx, s.bucketName, fileKey, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get object: %w", err)

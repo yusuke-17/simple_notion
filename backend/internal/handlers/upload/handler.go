@@ -251,7 +251,7 @@ func (h *UploadHandler) GetStorageUsage(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(response)
 }
 
-// ServeFile は MinIOからファイルを配信するハンドラー（プロキシ方式）
+// ServeFile は ストレージからファイルを配信するハンドラー（プロキシ方式）
 func (h *UploadHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 	// パラメータからファイル名を取得
 	vars := mux.Vars(r)
@@ -265,7 +265,7 @@ func (h *UploadHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// MinIOからファイルを取得
+	// ストレージからファイルを取得
 	object, err := h.fileService.GetFileObject(r.Context(), fileMeta.FileKey)
 	if err != nil {
 		http.Error(w, "Failed to retrieve file", http.StatusInternalServerError)

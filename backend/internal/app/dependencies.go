@@ -31,7 +31,7 @@ type Dependencies struct {
 	FileService     *services.FileService
 
 	// Storage
-	S3Client *storage.S3Client
+	ObjectStorage storage.ObjectStorage
 
 	// Handlers
 	AuthHandler     *handlers.AuthHandler
@@ -106,9 +106,9 @@ func (d *Dependencies) initRepositories() error {
 
 // initServices は、全てのServiceを初期化します
 func (d *Dependencies) initServices() error {
-	// S3Clientの初期化
+	// ObjectStorageの初期化（S3互換ストレージ）
 	var err error
-	d.S3Client, err = storage.NewS3Client(
+	d.ObjectStorage, err = storage.NewS3Client(
 		d.Config.S3Endpoint,
 		d.Config.S3AccessKey,
 		d.Config.S3SecretKey,
@@ -118,7 +118,7 @@ func (d *Dependencies) initServices() error {
 		d.Config.S3ExternalEndpoint,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create s3 client: %w", err)
+		return fmt.Errorf("failed to create object storage client: %w", err)
 	}
 
 	// Document Service
@@ -132,7 +132,7 @@ func (d *Dependencies) initServices() error {
 	// File Service
 	d.FileService = services.NewFileService(
 		d.FileRepository,
-		d.S3Client,
+		d.ObjectStorage,
 		d.Config.MaxFileSize,
 		d.Config.S3PresignExpiry,
 	)
