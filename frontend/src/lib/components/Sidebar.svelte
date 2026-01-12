@@ -22,13 +22,11 @@
   let trashedDocuments = $state<Document[]>([])
   let showingTrash = $state(false)
   let hoveredDocId = $state<number | null>(null)
-  let loading = $state(false)
 
   /**
    * ドキュメント一覧を読み込み
    */
   async function loadDocuments() {
-    loading = true
     try {
       const response = await fetch(`${API_BASE_URL}/api/documents`, {
         credentials: 'include',
@@ -43,8 +41,6 @@
     } catch (error) {
       console.error('Failed to load documents:', error)
       documents = []
-    } finally {
-      loading = false
     }
   }
 
@@ -52,7 +48,6 @@
    * ゴミ箱のドキュメント一覧を読み込み
    */
   async function loadTrashedDocuments() {
-    loading = true
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/documents?deleted=true`,
@@ -70,8 +65,6 @@
     } catch (error) {
       console.error('Failed to load trashed documents:', error)
       trashedDocuments = []
-    } finally {
-      loading = false
     }
   }
 
@@ -79,7 +72,6 @@
    * 新規ドキュメント作成
    */
   async function createDocument() {
-    loading = true
     try {
       const response = await fetch(`${API_BASE_URL}/api/documents`, {
         method: 'POST',
@@ -97,8 +89,6 @@
       onDocumentSelect(newDoc.id)
     } catch (error) {
       console.error('Failed to create document:', error)
-    } finally {
-      loading = false
     }
   }
 
@@ -110,7 +100,6 @@
 
     if (!confirm('Move this document to trash?')) return
 
-    loading = true
     try {
       const response = await fetch(`${API_BASE_URL}/api/documents/${docId}`, {
         method: 'DELETE',
@@ -125,8 +114,6 @@
       onDocumentDelete(docId)
     } catch (error) {
       console.error('Failed to delete document:', error)
-    } finally {
-      loading = false
     }
   }
 
@@ -134,7 +121,6 @@
    * ドキュメント復元
    */
   async function restoreDocument(docId: number) {
-    loading = true
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/documents/${docId}/restore`,
@@ -151,8 +137,6 @@
       await Promise.all([loadTrashedDocuments(), loadDocuments()])
     } catch (error) {
       console.error('Failed to restore document:', error)
-    } finally {
-      loading = false
     }
   }
 
@@ -164,7 +148,6 @@
       return
     }
 
-    loading = true
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/documents/${docId}/permanent`,
@@ -181,8 +164,6 @@
       await loadTrashedDocuments()
     } catch (error) {
       console.error('Failed to permanently delete document:', error)
-    } finally {
-      loading = false
     }
   }
 

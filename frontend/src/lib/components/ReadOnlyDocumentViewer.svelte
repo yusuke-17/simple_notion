@@ -19,8 +19,7 @@
    */
 
   // Props
-  let { documentId, onClose = undefined }: ReadOnlyDocumentViewerProps =
-    $props()
+  let { documentId }: ReadOnlyDocumentViewerProps = $props()
 
   // ストアを作成
   let store = $state(createReadOnlyDocumentViewerStore(documentId))

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte'
-  import { dndzone, TRIGGERS } from 'svelte-dnd-action'
+  import { dndzone } from 'svelte-dnd-action'
   import Input from '$lib/components/ui/input.svelte'
   import BlockEditor from '$lib/components/BlockEditor.svelte'
   import type { Block, Document as DocumentType } from '$lib/types'
@@ -209,14 +209,6 @@
       position: index,
     }))
     scheduleAutoSave()
-  }
-
-  /**
-   * ドラッグ中のアニメーション設定
-   */
-  const dndOptions = {
-    flipDurationMs: 200,
-    dropTargetStyle: {},
   }
 </script>
 

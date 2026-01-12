@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Upload, X, ImageIcon, AlertCircle, XCircle } from 'lucide-svelte'
+  import { Upload, X, AlertCircle, XCircle } from 'lucide-svelte'
   import type { ImageBlockContent, UploadProgressInfo } from '$lib/types'
   import {
     uploadImageFileWithProgress,

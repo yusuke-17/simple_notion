@@ -2,7 +2,6 @@
   import Button from './button.svelte'
   import { Palette, Type } from 'lucide-svelte'
   import { COLOR_OPTIONS, HIGHLIGHT_OPTIONS } from '$lib/utils/colorOptions'
-  import type { ColorOption } from '$lib/utils/colorOptions'
 
   /**
    * ColorPaletteコンポーネントのProps型定義

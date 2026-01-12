@@ -19,7 +19,6 @@
     setTextColor,
     setHighlightColor,
     setLink,
-    removeLink,
   }: {
     position: { top: number; left: number }
     toggleBold: () => void
@@ -29,7 +28,6 @@
     setTextColor: (color: string) => void
     setHighlightColor: (color: string) => void
     setLink: (url: string) => void
-    removeLink: () => void
   } = $props()
 
   let showColorPalette = $state(false)

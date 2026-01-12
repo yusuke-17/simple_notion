@@ -59,7 +59,6 @@
     if (!editorElement) return
 
     const parsedContent = parseContent(content)
-    const isEmpty = parsedContent === null
     const isValidJson =
       parsedContent !== null && typeof parsedContent === 'object'
 

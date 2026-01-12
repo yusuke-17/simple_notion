@@ -236,10 +236,6 @@
     editor?.chain().focus().unsetLink().run()
   }
 
-  function isFormatActive(format: string): boolean {
-    return editor?.isActive(format) ?? false
-  }
-
   onDestroy(() => {
     if (editor) {
       editor.destroy()
@@ -262,7 +258,6 @@
       {setTextColor}
       {setHighlightColor}
       {setLink}
-      {removeLink}
     />
   {/if}
 </div>
