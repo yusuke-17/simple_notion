@@ -6,9 +6,22 @@
     Strikethrough,
     Palette,
     Link as LinkIcon,
+    Table,
   } from 'lucide-svelte'
   import Button from '$lib/components/ui/button.svelte'
   import ColorPalette from '$lib/components/ui/ColorPalette.svelte'
+
+  interface FloatingToolbarProps {
+    position: { top: number; left: number }
+    toggleBold: () => void
+    toggleItalic: () => void
+    toggleUnderline: () => void
+    toggleStrike: () => void
+    setTextColor: (color: string) => void
+    setHighlightColor: (color: string) => void
+    setLink: (url: string) => void
+    insertTable?: () => void
+  }
 
   let {
     position,
@@ -19,16 +32,8 @@
     setTextColor,
     setHighlightColor,
     setLink,
-  }: {
-    position: { top: number; left: number }
-    toggleBold: () => void
-    toggleItalic: () => void
-    toggleUnderline: () => void
-    toggleStrike: () => void
-    setTextColor: (color: string) => void
-    setHighlightColor: (color: string) => void
-    setLink: (url: string) => void
-  } = $props()
+    insertTable,
+  }: FloatingToolbarProps = $props()
 
   let showColorPalette = $state(false)
   let currentPaletteType = $state<'text' | 'highlight'>('text')
@@ -131,4 +136,18 @@
   >
     <LinkIcon class="h-4 w-4" />
   </Button>
+
+  {#if insertTable}
+    <div class="h-4 w-px bg-gray-600"></div>
+
+    <Button
+      variant="ghost"
+      size="sm"
+      onclick={insertTable}
+      class="text-white hover:bg-gray-700"
+      aria-label="テーブルを挿入"
+    >
+      <Table class="h-4 w-4" />
+    </Button>
+  {/if}
 </div>

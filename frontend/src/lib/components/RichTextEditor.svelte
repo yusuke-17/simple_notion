@@ -15,12 +15,19 @@
   import { HardBreak } from '@tiptap/extension-hard-break'
   import { Dropcursor } from '@tiptap/extension-dropcursor'
   import { Gapcursor } from '@tiptap/extension-gapcursor'
+  import { TableKit } from '@tiptap/extension-table'
   import FloatingToolbar from '$lib/components/FloatingToolbar.svelte'
+  import TableFloatingMenu from '$lib/components/TableFloatingMenu.svelte'
   import {
     normalizeContent,
     getSelectionCoordinates,
     hasSelection,
   } from '$lib/utils/editorUtils'
+  import {
+    getTableMenuPosition,
+    isTableActive,
+    TABLE_MENU_CONFIG,
+  } from '$lib/utils/tableUtils'
 
   // Props
   let {
@@ -39,6 +46,8 @@
   let editor: Editor | null = $state(null)
   let showToolbar = $state(false)
   let toolbarPosition = $state({ top: 0, left: 0 })
+  let showTableMenu = $state(false)
+  let tableMenuPosition = $state({ top: 0, left: 0 })
   let lastContent = $state('')
   let isUpdating = $state(false)
 
@@ -46,6 +55,7 @@
    * テキスト選択時のツールバー表示処理
    */
   function handleSelectionUpdate() {
+    // テキスト選択時のツールバー
     if (hasSelection() && editorElement) {
       const coords = getSelectionCoordinates(editorElement)
       if (coords) {
@@ -54,6 +64,17 @@
       }
     } else {
       showToolbar = false
+    }
+
+    // テーブルメニューの表示判定
+    if (editor && editorElement && isTableActive(editor)) {
+      const tableCoords = getTableMenuPosition(editorElement)
+      if (tableCoords) {
+        tableMenuPosition = tableCoords
+        showTableMenu = true
+      }
+    } else {
+      showTableMenu = false
     }
   }
 
@@ -98,6 +119,18 @@
           HTMLAttributes: {
             class:
               'underline decoration-2 underline-offset-2 decoration-blue-500',
+          },
+        }),
+        TableKit.configure({
+          tableCell: {
+            HTMLAttributes: {
+              class: 'border border-gray-300 px-3 py-2 min-w-[100px]',
+            },
+          },
+          tableHeader: {
+            HTMLAttributes: {
+              class: 'border border-gray-400 bg-gray-100 px-3 py-2 font-semibold min-w-[100px]',
+            },
           },
         }),
       ],
@@ -232,6 +265,49 @@
     }
   }
 
+  /**
+   * テーブル操作関数
+   */
+  function insertTable() {
+    editor
+      ?.chain()
+      .focus()
+      .insertTable({
+        rows: TABLE_MENU_CONFIG.DEFAULT_ROWS,
+        cols: TABLE_MENU_CONFIG.DEFAULT_COLS,
+        withHeaderRow: TABLE_MENU_CONFIG.WITH_HEADER_ROW,
+      })
+      .run()
+  }
+
+  function addRowBefore() {
+    editor?.chain().focus().addRowBefore().run()
+  }
+
+  function addRowAfter() {
+    editor?.chain().focus().addRowAfter().run()
+  }
+
+  function deleteRow() {
+    editor?.chain().focus().deleteRow().run()
+  }
+
+  function addColumnBefore() {
+    editor?.chain().focus().addColumnBefore().run()
+  }
+
+  function addColumnAfter() {
+    editor?.chain().focus().addColumnAfter().run()
+  }
+
+  function deleteColumn() {
+    editor?.chain().focus().deleteColumn().run()
+  }
+
+  function deleteTable() {
+    editor?.chain().focus().deleteTable().run()
+  }
+
   onDestroy(() => {
     if (editor) {
       editor.destroy()
@@ -254,6 +330,21 @@
       {setTextColor}
       {setHighlightColor}
       {setLink}
+      {insertTable}
+    />
+  {/if}
+
+  <!-- テーブルフローティングメニュー -->
+  {#if showTableMenu}
+    <TableFloatingMenu
+      position={tableMenuPosition}
+      onAddRowBefore={addRowBefore}
+      onAddRowAfter={addRowAfter}
+      onDeleteRow={deleteRow}
+      onAddColumnBefore={addColumnBefore}
+      onAddColumnAfter={addColumnAfter}
+      onDeleteColumn={deleteColumn}
+      onDeleteTable={deleteTable}
     />
   {/if}
 </div>
