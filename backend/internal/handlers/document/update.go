@@ -32,15 +32,6 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// デバッグ: ブロック情報をログ出力
-	fmt.Printf("[DEBUG] UpdateDocument: docID=%d, title=%s, blocks count=%d\n", docID, req.Title, len(req.Blocks))
-	for i, block := range req.Blocks {
-		fmt.Printf("[DEBUG] Block %d: id=%d, type=%s, content length=%d\n", i, block.ID, block.Type, len(block.Content))
-		if block.Type == "image" || block.Type == "file" {
-			fmt.Printf("[DEBUG] Block %d content: %s\n", i, string(block.Content))
-		}
-	}
-
 	// 該当する場合はリッチテキストJSONを検証
 	if err := ValidateRichTextJSON(req.Content); err != nil {
 		http.Error(w, "Invalid rich text content", http.StatusBadRequest)
@@ -78,5 +69,8 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(updatedDoc)
+	if err := json.NewEncoder(w).Encode(updatedDoc); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }

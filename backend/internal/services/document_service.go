@@ -4,24 +4,23 @@ import (
 	"fmt"
 
 	"simple-notion-backend/internal/models"
-	"simple-notion-backend/internal/repository"
 )
 
 // DocumentService - 文書操作の統合サービス
 // 複数のRepositoryを組み合わせて、高レベルなビジネスロジックを提供
 type DocumentService struct {
-	documentRepo *repository.DocumentCoreRepository
-	blockRepo    *repository.BlockRepository
-	treeRepo     *repository.DocumentTreeRepository
-	trashRepo    *repository.DocumentTrashRepository
+	documentRepo DocumentCoreRepositoryInterface
+	blockRepo    BlockRepositoryInterface
+	treeRepo     DocumentTreeRepositoryInterface
+	trashRepo    DocumentTrashRepositoryInterface
 }
 
 // NewDocumentService - DocumentServiceを初期化
 func NewDocumentService(
-	documentRepo *repository.DocumentCoreRepository,
-	blockRepo *repository.BlockRepository,
-	treeRepo *repository.DocumentTreeRepository,
-	trashRepo *repository.DocumentTrashRepository,
+	documentRepo DocumentCoreRepositoryInterface,
+	blockRepo BlockRepositoryInterface,
+	treeRepo DocumentTreeRepositoryInterface,
+	trashRepo DocumentTrashRepositoryInterface,
 ) *DocumentService {
 	return &DocumentService{
 		documentRepo: documentRepo,

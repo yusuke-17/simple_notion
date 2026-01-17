@@ -4,7 +4,9 @@
       "Bash(npm run lint)",
       "Bash(pnpm test:*)",
       "Bash(pnpm run type-check:*)",
-      "Bash(pnpm run check:*)"
+      "Bash(pnpm run check:*)",
+      "Bash(go test:*)",
+      "Bash(go fmt:*)"
     ]
   }
 }

@@ -21,7 +21,10 @@ func (h *DocumentHandler) GetDocumentTree(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tree)
+	if err := json.NewEncoder(w).Encode(tree); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *DocumentHandler) GetDocument(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +52,10 @@ func (h *DocumentHandler) GetDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(doc)
+	if err := json.NewEncoder(w).Encode(doc); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *DocumentHandler) GetDocuments(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +69,10 @@ func (h *DocumentHandler) GetDocuments(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(docs)
+		if err := json.NewEncoder(w).Encode(docs); err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
@@ -74,5 +83,8 @@ func (h *DocumentHandler) GetDocuments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tree)
+	if err := json.NewEncoder(w).Encode(tree); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }

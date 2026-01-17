@@ -26,7 +26,10 @@ func (h *DocumentHandler) DeleteDocument(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Document deleted successfully"})
+	if err := json.NewEncoder(w).Encode(map[string]string{"message": "Document deleted successfully"}); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *DocumentHandler) RestoreDocument(w http.ResponseWriter, r *http.Request) {
@@ -62,5 +65,8 @@ func (h *DocumentHandler) PermanentDeleteDocument(w http.ResponseWriter, r *http
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Document permanently deleted"})
+	if err := json.NewEncoder(w).Encode(map[string]string{"message": "Document permanently deleted"}); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
