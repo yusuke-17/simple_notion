@@ -6,7 +6,8 @@
       "Bash(pnpm run type-check:*)",
       "Bash(pnpm run check:*)",
       "Bash(go test:*)",
-      "Bash(go fmt:*)"
+      "Bash(go fmt:*)",
+      "Bash(find:*)"
     ]
   }
 }
