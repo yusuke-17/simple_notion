@@ -7,7 +7,8 @@
       "Bash(pnpm run check:*)",
       "Bash(go test:*)",
       "Bash(go fmt:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ]
   }
 }
