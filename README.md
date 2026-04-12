@@ -1,6 +1,7 @@
 # Simple Notion Clone
 
 個人利用向けのシンプルなNotionクローンアプリケーションです。
+技術スタックの基礎力強化を目的とした学習プロジェクトであり、インフラ・バックエンド・フロントエンドの実践的な設計を重視しています。
 
 ## 技術スタック
 
@@ -17,312 +18,19 @@
 - **PostgreSQL 18** (データベース)
 - **JWT** + **Cookie** (認証)
 
-## 機能
+### インフラ・DevOps
+- **Docker & Docker Compose** (コンテナ管理・開発/本番環境分離)
+- **GitHub Actions** (CI/CD)
+- **Husky** (Git Hooks による品質管理)
 
-### 🎯 コア機能
-- ✅ ユーザー認証（登録/ログイン/ログアウト）
-- ✅ ドキュメント管理（作成/編集/削除/復元）
-- ✅ 階層構造（親子関係のツリー構造）
-- ✅ ゴミ箱機能（論理削除・読み取り専用表示）
-- ✅ ドラッグ&ドロップでの移動
+## アーキテクチャ
 
-### 📝 リッチテキストエディター
-- ✅ **Notionライクなブロックベースエディター**
-  - 複数ブロックタイプ：テキスト、見出し(H1-H3)、箇条書き、番号付きリスト、引用、コード、**画像**
-  - キーボードショートカット：`Enter`(新ブロック)、`Backspace`(削除)、`Cmd+↑/↓`(移動)、`/`(タイプ選択)
-  - ホバーコントロール：追加、削除、ドラッグハンドルボタン
-  - リアルタイムブロック操作と移動
-- ✅ **インライン装飾機能**
-  - 太字、斜体、下線、取り消し線
-  - テキスト色・背景色（Notion風10色パレット対応）
-  - キーボードショートカット（`Cmd+B`, `Cmd+I`等）
-- ✅ **リンク機能**
-  - テキスト選択からのリンク追加・編集
-  - URL自動検出とバリデーション
-  - 新しいタブで開くオプション
-  - ホバーツールバーからワンクリックでリンク設定
-  - リンク解除機能
-- ✅ **高度なエディター機能**
-  - 自動保存（リアルタイム）
-  - 安定したコンテンツ同期
-  - 最適化されたUX/UI
+### 設計方針
+- **フロントエンド**: 関数型分離パターン（View ↔ Utils、Svelte 5 Runes による状態管理）
+- **バックエンド**: Clean Architecture（Handler → Service → Repository）
+- **リアルタイム自動保存**: 最適化された debounce 処理
 
-### 🖼️ 画像ブロック機能
-- ✅ **画像アップロード & 管理**
-  - ドラッグ&ドロップアップロード対応
-  - ファイル選択ダイアログ
-  - 対応形式：JPEG、PNG、GIF、WebP（最大5MB）
-  - セキュア認証付きアップロードAPI
-- ✅ **リッチな画像編集機能**
-  - リアルタイムプレビュー表示
-  - キャプション編集（画像説明文）
-  - Alt属性編集（アクセシビリティ対応）
-  - 画像情報表示（ファイル名、サイズ、寸法）
-- ✅ **ユーザビリティ**
-  - エラーハンドリング（ファイル形式・サイズ制限）
-  - ワンクリック画像削除
-  - レスポンシブ表示（自動リサイズ）
-
-### 🗑️ ゴミ箱機能
-- ✅ **安全な削除システム**
-  - 論理削除による安全なドキュメント管理
-  - 完全削除前の確認ダイアログ
-  - ワンクリック復元機能
-- ✅ **読み取り専用表示**
-  - ゴミ箱内ドキュメントをクリックしてプレビュー
-  - 全ての編集機能を無効化（タイトル・ブロック編集不可）
-  - グレーアウト表示で読み取り専用であることを明示
-  - テキスト選択・コピーは可能
-
-## 今後の拡張予定
-
-### 優先度高
-- [ ] **メディアブロック Phase 2**: ファイルブロック対応（PDF、Word、Excel等）
-- [ ] **メディアブロック Phase 3**: 動画ブロック対応（MP4、WebM等の動画アップロード・再生）
-- [ ] **検索機能**: 全文検索・クイック検索（Cmd+K）
-
-### 優先度中  
-- [ ] **テーブル・データベース**: 構造化データ管理
-- [ ] **高度なブロック**: コールアウト・トグル・To-doリスト
-- [ ] **エクスポート**: PDF・Markdown形式対応
-
-### 将来的な拡張
-- [ ] **コラボレーション**: リアルタイム共同編集
-- [ ] **モバイル対応**: レスポンシブ・PWA
-- [ ] **テーマ機能**: ダークモード・カスタマイズ
-
-## 🔒 セキュリティ設定
-
-**重要**: このアプリケーションを使用する前に、必ずセキュリティ設定を適切に行ってください。
-
-### JWT秘密鍵の設定
-JWT秘密鍵はユーザー認証において極めて重要な要素です。デフォルト値のまま使用すると、セキュリティ上の深刻な脆弱性となります。
-
-#### 1. 安全なJWT秘密鍵の生成
-```bash
-# 方法1: Makefileコマンドを使用（推奨）
-make generate-jwt-secret
-
-# 方法2: opensslを直接使用
-openssl rand -base64 64
-```
-
-#### 2. 環境変数ファイルの作成
-```bash
-# .env.exampleから.envファイルを作成
-make setup-env
-
-# または手動でコピー
-cp .env.example .env
-```
-
-#### 3. .envファイルの編集
-生成したJWT秘密鍵を`.env`ファイルの`JWT_SECRET`に設定します：
-```bash
-JWT_SECRET=your_generated_secure_jwt_secret_here
-```
-
-#### 4. セキュリティチェック
-```bash
-# セキュリティ設定の確認
-make security-check
-```
-
-### 📋 セキュリティチェックリスト
-- [ ] JWT_SECRETに強力なランダム文字列（最低32文字）を設定
-- [ ] POSTGRES_PASSWORDに強力なパスワードを設定
-- [ ] .envファイルがGitにコミットされていないことを確認
-- [ ] 本番環境では`ENVIRONMENT=production`に設定
-- [ ] 本番環境では`COOKIE_SECURE=true`に設定
-
-### ⚠️ セキュリティ注意事項
-1. **JWT_SECRET**: デフォルト値は絶対に使用しない
-2. **.envファイル**: Gitリポジトリにコミットしない（.gitignoreに含まれています）
-3. **パスワード**: 本番環境では強力なパスワードを使用
-4. **HTTPS**: 本番環境では必ずHTTPSを使用
-5. **定期更新**: JWT秘密鍵とパスワードは定期的に更新
-
-## 開発環境セットアップ
-
-### 必要な環境
-- **Node.js v24.12+**
-- **pnpm v10.12.4+** (パッケージマネージャー)
-- **Go 1.25+**  
-- **Docker & Docker Compose**
-
-### 1. プロジェクトクローン
-```bash
-git clone <repository-url>
-cd simple_notion
-```
-
-### 1.1. pnpmのインストール (初回のみ)
-```bash
-# macOS (Homebrew)
-brew install pnpm
-
-# npm経由でインストール
-npm install -g pnpm
-
-# Corepack経由でインストール (Node.js v16.13+)
-corepack enable
-corepack prepare pnpm@latest --activate
-
-# バージョン確認
-pnpm --version
-```
-
-### 2. 開発環境のセットアップ
-
-#### 環境変数の設定
-```bash
-# 開発環境用
-cp .env.example .env
-
-# 本番環境用
-cp .env.production .env
-# その後、適切なパスワードとJWT秘密鍵を設定
-```
-
-**重要:** 本番環境では必ず以下を変更してください：
-- `POSTGRES_PASSWORD`: 強力なパスワードを設定
-- `JWT_SECRET`: 長いランダムな文字列を設定
-
-#### Docker Composeで起動
-
-**開発環境（推奨）:**
-```bash
-# 開発環境で起動（ホットリロード、デバッグモード）
-make dev
-
-# または直接実行
-docker-compose -f docker-compose.dev.yml up -d
-```
-
-**本番環境:**
-```bash
-# 本番環境で起動（最適化ビルド、セキュリティ強化）
-make up
-
-# 環境変数ファイルを指定する場合
-cp .env.production .env && make up
-```
-
-**便利なコマンド:**
-```bash
-make dev           # 開発環境起動
-make stop          # サービス停止
-make restart       # サービス再起動
-make logs          # ログ表示
-make clean         # コンテナとイメージ削除
-make fresh-dev     # クリーンな開発環境構築
-```
-
-## 🔍 開発品質管理
-
-### Git Hooks（自動実行）
-コミット・プッシュ時に自動でコード品質チェックが実行されます：
-
-```bash
-# コミット時: 軽量チェック（ESLint、型チェック等）
-# プッシュ時: 包括チェック（全テスト、カバレッジ等）
-```
-
-### 手動チェックコマンド
-```bash
-make test          # テスト実行
-make lint          # リント・フォーマット
-make test-coverage # カバレッジレポート
-make ci            # 完全なCI/CDチェック
-```
-
-### 緊急時のスキップ
-```bash
-git commit --no-verify  # Pre-commitスキップ
-git push --no-verify    # Pre-pushスキップ
-```
-
-### 3. 個別に開発する場合
-
-#### データベースのみDockerで起動
-```bash
-docker-compose up -d db
-```
-
-#### フロントエンド開発
-```bash
-cd frontend
-pnpm install
-pnpm dev
-```
-
-#### バックエンド開発
-```bash
-cd backend
-go mod tidy
-go run cmd/server/main.go
-```
-
-## アクセス
-
-### 開発環境
-- **フロントエンド**: http://localhost:5174
-- **バックエンドAPI**: http://localhost:8080
-
-### 本番環境
-- **フロントエンド**: http://localhost:3000
-- **バックエンドAPI**: 内部通信
-
-## 🌍 環境設定
-
-| 項目 | 開発環境 | 本番環境 |
-|------|----------|----------|
-| **起動コマンド** | `make dev` | `make up` |
-| **Docker設定** | `docker-compose.dev.yml` | `docker-compose.yml` |
-| **フロントエンド** | Vite開発サーバー（HMR） | Nginx静的配信 |
-| **バックエンド** | Airホットリロード | 最適化済みバイナリ |
-| **ポート** | 5174（frontend）, 8080（backend） | 3000（frontend）, 8080（backend） |
-| **環境変数** | `.env` | `.env.production` |
-
-## API エンドポイント
-
-### 認証
-- `POST /api/auth/login` - ログイン
-- `POST /api/auth/register` - ユーザー登録
-- `POST /api/auth/logout` - ログアウト
-- `GET /api/auth/me` - 現在のユーザー情報
-
-### ドキュメント
-- `GET /api/documents/tree` - ドキュメントツリー取得
-- `GET /api/documents/{id}` - ドキュメント詳細取得
-- `POST /api/documents` - ドキュメント作成
-- `PUT /api/documents/{id}` - ドキュメント更新
-- `DELETE /api/documents/{id}` - ドキュメント削除（論理削除）
-- `PUT /api/documents/{id}/restore` - ドキュメント復元
-- `PUT /api/documents/{id}/move` - ドキュメント移動
-
-### 画像・メディア
-- `POST /api/upload/image` - 画像ファイルアップロード（認証必須、最大5MB）
-- `GET /api/uploads/{filename}` - アップロード画像の配信
-
-## テスト実行
-
-### フロントエンド
-```bash
-cd frontend
-pnpm test
-pnpm test:ui  # UI付きテスト
-```
-
-### バックエンド
-```bash
-cd backend
-go test ./...
-```
-
-## プロジェクト構造
-
-### 関数型分離アーキテクチャ
+### プロジェクト構造
 
 ```
 simple_notion/
@@ -333,116 +41,275 @@ simple_notion/
 │   │   │   ├── stores/      # 状態管理 (Svelte 5 Runes)
 │   │   │   ├── utils/       # 純粋関数層
 │   │   │   └── types/       # TypeScript 型定義
-│   │   ├── tests/          # テストファイル
-│   │   ├── App.svelte      # ルートコンポーネント
-│   │   └── main.ts         # エントリーポイント
+│   │   ├── tests/           # テストファイル
+│   │   ├── App.svelte       # ルートコンポーネント
+│   │   └── main.ts          # エントリーポイント
 │   └── package.json
-├── backend/                # Go アプリケーション（Clean Architecture）
-│   ├── cmd/server/         # エントリーポイント
+├── backend/                 # Go アプリケーション（Clean Architecture）
+│   ├── cmd/server/          # エントリーポイント
 │   ├── internal/
-│   │   ├── app/           # アプリケーション設定・ライフサイクル
-│   │   ├── handlers/      # HTTP ハンドラー
-│   │   ├── services/      # ビジネスロジック層
-│   │   ├── repository/    # データアクセス層
-│   │   ├── models/        # データモデル
-│   │   ├── middleware/    # ミドルウェア
-│   │   └── config/        # 設定管理
-│   ├── migrations/        # データベースマイグレーション
+│   │   ├── app/             # アプリケーション設定・ライフサイクル
+│   │   ├── handlers/        # HTTP ハンドラー
+│   │   ├── services/        # ビジネスロジック層
+│   │   ├── repository/      # データアクセス層
+│   │   ├── models/          # データモデル
+│   │   ├── middleware/      # ミドルウェア
+│   │   └── config/          # 設定管理
+│   ├── migrations/          # データベースマイグレーション
 │   └── go.mod
-├── .github/               # GitHub Actions CI/CD
-├── .husky/               # Git Hooks設定
-├── docker-compose.yml    # 本番環境設定
-├── docker-compose.dev.yml # 開発環境設定
-└── Makefile             # 開発用タスク
+├── .github/workflows/       # GitHub Actions CI/CD
+├── .husky/                  # Git Hooks 設定
+├── docker-compose.yml       # 本番環境設定
+├── docker-compose.dev.yml   # 開発環境設定
+└── Makefile                 # 開発用タスク
 ```
 
-## ⚡ 開発のポイント
+## 機能
 
-### アーキテクチャ
-- **フロントエンド**: 関数型分離パターン（View↔Utils、Svelte 5 Runesによる状態管理）
-- **バックエンド**: Clean Architecture（Handler→Service→Repository）
-- **リアルタイム自動保存**: 最適化されたdebounce処理
+### コア機能
+- ユーザー認証（登録 / ログイン / ログアウト）
+- ドキュメント管理（作成 / 編集 / 削除 / 復元）
+- 階層構造（親子関係のツリー構造）
+- ゴミ箱機能（論理削除・読み取り専用表示・復元）
+- ドラッグ & ドロップでのドキュメント移動
 
-### パフォーマンス
-- 個人利用想定（100-500ドキュメント規模）
-- TipTapエディターの安定性向上
-- GPU加速とメモリ効率化
+### リッチテキストエディター
+- **ブロックベース編集**: テキスト、見出し (H1-H3)、箇条書き、番号付きリスト、引用、コード、画像
+- **キーボードショートカット**: `Enter`（新ブロック）、`Backspace`（削除）、`Cmd+↑/↓`（移動）、`/`（タイプ選択）
+- **インライン装飾**: 太字、斜体、下線、取り消し線、テキスト色・背景色（10色パレット）
+- **リンク機能**: テキスト選択からのリンク追加・編集、URL 自動検出、リンク解除
+- **自動保存**: リアルタイムでの自動保存と安定したコンテンツ同期
 
-### セキュリティ
-- JWT認証（24時間有効）+ Cookie
+### 画像ブロック
+- ドラッグ & ドロップアップロード対応（JPEG / PNG / GIF / WebP、最大 5MB）
+- リアルタイムプレビュー、キャプション編集、Alt 属性編集
+- 画像情報表示（ファイル名、サイズ、寸法）
+
+### ゴミ箱
+- 論理削除による安全なドキュメント管理
+- 完全削除前の確認ダイアログ、ワンクリック復元
+- ゴミ箱内ドキュメントの読み取り専用プレビュー
+
+## API エンドポイント
+
+### 認証
+| メソッド | パス | 説明 |
+|---------|------|------|
+| POST | `/api/auth/register` | ユーザー登録 |
+| POST | `/api/auth/login` | ログイン |
+| POST | `/api/auth/logout` | ログアウト |
+| GET | `/api/auth/me` | 現在のユーザー情報取得 |
+
+### ドキュメント
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/api/documents/tree` | ドキュメントツリー取得 |
+| GET | `/api/documents/{id}` | ドキュメント詳細取得 |
+| POST | `/api/documents` | ドキュメント作成 |
+| PUT | `/api/documents/{id}` | ドキュメント更新 |
+| DELETE | `/api/documents/{id}` | ドキュメント削除（論理削除） |
+| PUT | `/api/documents/{id}/restore` | ドキュメント復元 |
+| PUT | `/api/documents/{id}/move` | ドキュメント移動 |
+
+### 画像・メディア
+| メソッド | パス | 説明 |
+|---------|------|------|
+| POST | `/api/upload/image` | 画像アップロード（認証必須、最大 5MB） |
+| GET | `/api/uploads/{filename}` | アップロード画像の配信 |
+
+## 開発環境セットアップ
+
+### 前提条件
+- Node.js v24.12+
+- pnpm v10.12.4+
+- Go 1.25+
+- Docker & Docker Compose
+
+### 1. クローンと環境変数の設定
+
+```bash
+git clone <repository-url>
+cd simple_notion
+
+# 環境変数ファイルを作成
+cp .env.example .env
+
+# JWT秘密鍵を生成して .env に設定
+make generate-jwt-secret
+```
+
+### 2. 起動
+
+```bash
+# 開発環境（ホットリロード有効）
+make dev
+
+# 本番環境（最適化ビルド）
+make up
+```
+
+### 3. アクセス
+
+| 環境 | フロントエンド | バックエンド API |
+|------|--------------|-----------------|
+| 開発 | http://localhost:5174 | http://localhost:8080 |
+| 本番 | http://localhost:3000 | 内部通信 |
+
+### 個別に開発する場合
+
+```bash
+# データベースのみ起動
+docker-compose up -d db
+
+# フロントエンド
+cd frontend && pnpm install && pnpm dev
+
+# バックエンド
+cd backend && go mod tidy && go run cmd/server/main.go
+```
+
+### pnpm のインストール（初回のみ）
+
+```bash
+# macOS
+brew install pnpm
+
+# npm 経由
+npm install -g pnpm
+
+# Corepack 経由（Node.js v16.13+）
+corepack enable && corepack prepare pnpm@latest --activate
+```
+
+> **注意**: このプロジェクトでは pnpm を採用しています。`npm install` は使用しないでください。
+
+## 環境設定
+
+| 項目 | 開発環境 | 本番環境 |
+|------|----------|----------|
+| 起動コマンド | `make dev` | `make up` |
+| Docker 設定 | `docker-compose.dev.yml` | `docker-compose.yml` |
+| フロントエンド | Vite 開発サーバー（HMR） | Nginx 静的配信 |
+| バックエンド | Air ホットリロード | 最適化済みバイナリ |
+| ポート | 5174（frontend）, 8080（backend） | 3000（frontend）, 8080（backend） |
+
+## 開発コマンド
+
+```bash
+make dev             # 開発環境起動
+make up              # 本番環境起動
+make stop            # サービス停止
+make restart         # サービス再起動
+make logs            # ログ表示
+make clean           # コンテナとイメージ削除
+make fresh-dev       # クリーンな開発環境構築
+
+make test            # テスト実行
+make lint            # リント・フォーマット
+make test-coverage   # カバレッジレポート
+make ci              # 完全な CI/CD チェック
+
+make generate-jwt-secret  # JWT秘密鍵の生成
+make setup-env            # 環境変数ファイルのセットアップ
+make security-check       # セキュリティ設定の確認
+```
+
+## 品質管理
+
+### Git Hooks（自動実行）
+- **コミット時**: ESLint、型チェック等の軽量チェック
+- **プッシュ時**: 全テスト、カバレッジ等の包括チェック
+
+```bash
+# 緊急時のスキップ
+git commit --no-verify
+git push --no-verify
+```
+
+### テスト
+
+```bash
+# フロントエンド
+cd frontend && pnpm test
+cd frontend && pnpm test:ui  # UI付きテスト
+
+# バックエンド
+cd backend && go test ./...
+```
+
+## セキュリティ
+
+### 実装済みの対策
+- JWT 認証（24 時間有効）+ HttpOnly Cookie
 - パスワードハッシュ化（bcrypt）
-- CORS・XSS対策
+- CORS・XSS 対策
 
-## 🔧 トラブルシューティング
+### セットアップ時の必須事項
 
-### よくある問題と解決方法
+1. **JWT 秘密鍵の設定**: デフォルト値は絶対に使用しない（`make generate-jwt-secret` で生成）
+2. **データベースパスワード**: `POSTGRES_PASSWORD` に強力なパスワードを設定
+3. **`.env` ファイル**: Git リポジトリにコミットしない（`.gitignore` に含まれています）
+4. **本番環境**: `ENVIRONMENT=production`、`COOKIE_SECURE=true` に設定
+5. **HTTPS**: 本番環境では必ず HTTPS を使用
 
-#### 502 Bad Gateway エラー
+## パフォーマンス
+- 個人利用想定（100-500 ドキュメント規模）
+- TipTap エディターの安定性最適化
+- GPU 加速とメモリ効率化
+
+## トラブルシューティング
+
+### 502 Bad Gateway エラー
 ```bash
-# 環境変数の確認
-cat frontend/.env  # VITE_API_BASE_URL=http://localhost:8080
-
-# サービス再起動
-make restart
-
-# 完全リセット
-make clean && make dev
+cat frontend/.env  # VITE_API_BASE_URL=http://localhost:8080 を確認
+make restart       # サービス再起動
+make clean && make dev  # 完全リセット
 ```
 
-#### 接続エラー
+### 接続エラー
 ```bash
-# サービス状態確認
-make ps
-
-# ログ確認
-make logs
-
-# ポート競合確認
-lsof -i :3000,8080,5432
+make ps                    # サービス状態確認
+make logs                  # ログ確認
+lsof -i :3000,8080,5432   # ポート競合確認
 ```
 
-#### 開発環境リセット
+### フロントエンドがバックエンドに接続できない
+- `VITE_API_BASE_URL` が正しく設定されているか確認
+- CORS エラーの場合は、バックエンドの CORS 設定を確認
+
+### 開発環境リセット
 ```bash
-make fresh-dev    # クリーンな開発環境構築
+make fresh-dev  # クリーンな開発環境構築
 ```
 
-## 📦 パッケージ管理
+## ロードマップ
 
-このプロジェクトは**pnpm**を採用しています。
+### Phase 1: 品質基盤の強化
+- [ ] `.env.production` のリポジトリからの除外（`git rm --cached`）
+- [ ] エラーハンドリングの統一（カスタムエラー型、ミドルウェアでの一括処理）
+- [ ] テストカバレッジの強化（handler 層・service 層のユニットテスト）
+- [ ] 構造化ログの導入（`slog` の活用）
 
-### 基本コマンド
-```bash
-# フロントエンド開発
-cd frontend
-pnpm install          # 依存関係インストール
-pnpm dev             # 開発サーバー起動
-pnpm build           # ビルド実行
-pnpm test            # テスト実行
+### Phase 2: インフラ・運用力の強化
+- [ ] Terraform / CDK による AWS リソースの IaC 化
+- [ ] AWS 構成の設計（ECS Fargate + RDS + CloudFront + S3）
+- [ ] GitHub Actions による CI/CD パイプラインの拡張（ビルド → テスト → ECR プッシュ → ECS デプロイ）
+- [ ] 監視・アラートの導入（CloudWatch / Datadog）
+- [ ] 画像アップロード先の S3 移行（署名付き URL）
 
-# バックエンド開発  
-cd backend
-go mod tidy          # 依存関係整理
-go run cmd/server/main.go  # サーバー起動
-go test ./...        # テスト実行
-```
+### Phase 3: 機能拡張・AI 統合
+- [ ] 全文検索の実装（PostgreSQL FTS: `to_tsvector` / `to_tsquery`）
+- [ ] pgvector による類似ドキュメント検索
+- [ ] メディアブロック Phase 2（PDF、Word、Excel 等のファイルブロック）
+- [ ] メディアブロック Phase 3（動画ブロック：MP4、WebM）
+- [ ] クイック検索（Cmd+K）
 
-### 注意事項
-- ❌ `npm install` は使用しない（pnpmを使用）
-- ✅ 隠れた依存関係の防止により安全なビルド
-- ✅ 高速インストール・ディスク容量削減
-
-3. **ブラウザのキャッシュクリア**
-   - 開発者ツール > Network > Disable cache
-
-### 開発時のよくある問題
-
-#### フロントエンドがバックエンドに接続できない
-- `VITE_API_BASE_URL`が正しく設定されているか確認
-- CORSエラーの場合は、バックエンドのCORS設定を確認
-
-#### データベース接続エラー
-- PostgreSQLが起動しているか確認
-- データベース設定が正しいか確認
+### 将来的な拡張
+- [ ] テーブル・データベース（構造化データ管理）
+- [ ] 高度なブロック（コールアウト、トグル、To-do リスト）
+- [ ] エクスポート（PDF・Markdown 形式）
+- [ ] ダークモード・テーマ機能
+- [ ] モバイル対応（レスポンシブ・PWA）
 
 ## ライセンス
 
