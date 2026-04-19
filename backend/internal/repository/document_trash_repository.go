@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/models"
 )
 
@@ -44,7 +45,7 @@ func (r *DocumentTrashRepository) SoftDeleteDocument(docID, userID int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("document not found or access denied")
+		return fmt.Errorf("document id=%d or access denied: %w", docID, apierror.ErrNotFound)
 	}
 
 	return nil
@@ -68,7 +69,7 @@ func (r *DocumentTrashRepository) RestoreDocument(docID, userID int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("document not found in trash or access denied")
+		return fmt.Errorf("document id=%d not found in trash or access denied: %w", docID, apierror.ErrNotFound)
 	}
 
 	return nil
@@ -111,7 +112,7 @@ func (r *DocumentTrashRepository) PermanentDeleteDocument(docID, userID int) err
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("document not found or access denied")
+		return fmt.Errorf("document id=%d or access denied: %w", docID, apierror.ErrNotFound)
 	}
 
 	return tx.Commit()

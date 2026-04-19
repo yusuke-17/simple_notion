@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/models"
 )
 
@@ -66,7 +67,7 @@ func (r *DocumentCoreRepository) GetDocument(docID, userID int) (*models.Documen
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, apierror.WrapNotFound(err, fmt.Sprintf("document id=%d user=%d", docID, userID))
 	}
 
 	return &doc, nil
@@ -87,7 +88,7 @@ func (r *DocumentCoreRepository) GetDocumentIncludingDeleted(docID, userID int) 
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, apierror.WrapNotFound(err, fmt.Sprintf("document id=%d user=%d", docID, userID))
 	}
 
 	return &doc, nil

@@ -2,10 +2,17 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
+	"github.com/lib/pq"
+
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/models"
 )
+
+// postgresUniqueViolation は PostgreSQL の UNIQUE 制約違反エラーコード
+const postgresUniqueViolation = "23505"
 
 type UserRepository struct {
 	db      *sql.DB
@@ -37,7 +44,7 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, apierror.WrapNotFound(err, fmt.Sprintf("user email=%s", email))
 	}
 
 	return &user, nil
@@ -56,7 +63,7 @@ func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, apierror.WrapNotFound(err, fmt.Sprintf("user id=%d", id))
 	}
 
 	return &user, nil
@@ -71,8 +78,16 @@ func (r *UserRepository) Create(user *models.User) error {
 	err = r.db.QueryRow(query, user.Email, user.PasswordHash, user.Name).Scan(
 		&user.ID, &user.CreatedAt, &user.UpdatedAt,
 	)
+	if err != nil {
+		// UNIQUE 制約違反（email 重複など）は ErrConflict にラップする
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == postgresUniqueViolation {
+			return fmt.Errorf("user email=%s: %w", user.Email, apierror.ErrConflict)
+		}
+		return err
+	}
 
-	return err
+	return nil
 }
 
 func (r *UserRepository) Update(user *models.User) error {

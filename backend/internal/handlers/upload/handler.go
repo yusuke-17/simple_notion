@@ -1,7 +1,7 @@
 package upload
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/services"
 )
@@ -101,12 +102,6 @@ type UploadResponse struct {
 	Message  string `json:"message,omitempty"`
 }
 
-// ErrorResponse は エラーレスポンス
-type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message"`
-}
-
 // StorageUsageResponse は ストレージ使用量レスポンス
 type StorageUsageResponse struct {
 	UserID     int     `json:"userId"`
@@ -128,21 +123,27 @@ func (h *UploadHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 	// ユーザーIDを取得（認証ミドルウェアで設定済み）
 	userID := middleware.GetUserIDFromContext(r.Context())
 	if userID == 0 {
-		sendErrorResponse(w, http.StatusUnauthorized, "Unauthorized", "User not authenticated")
+		apierror.Write(w, r, apierror.NewUnauthorized(
+			"UNAUTHORIZED", "認証が必要です", nil,
+		))
 		return
 	}
 
 	// multipart/form-dataの解析（最大32MB）
 	err := r.ParseMultipartForm(32 << 20)
 	if err != nil {
-		sendErrorResponse(w, http.StatusBadRequest, "Invalid form data", err.Error())
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_FORM_DATA", "フォームデータの解析に失敗しました", err,
+		))
 		return
 	}
 
 	// ファイルの取得
 	file, header, err := r.FormFile("image")
 	if err != nil {
-		sendErrorResponse(w, http.StatusBadRequest, "No file uploaded", "Please select an image file to upload")
+		apierror.Write(w, r, apierror.NewValidationError(
+			"NO_FILE_UPLOADED", "画像ファイルを選択してください", err,
+		))
 		return
 	}
 	defer file.Close()
@@ -150,14 +151,22 @@ func (h *UploadHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 	// ストレージクォータチェック
 	err = h.fileService.CheckStorageQuota(r.Context(), userID, header.Size, h.userStorageQuota)
 	if err != nil {
-		sendErrorResponse(w, http.StatusRequestEntityTooLarge, "Storage quota exceeded", err.Error())
+		if errors.Is(err, services.ErrStorageQuotaExceeded) {
+			apierror.Write(w, r, apierror.NewPayloadTooLarge(
+				"QUOTA_EXCEEDED", "ストレージ容量の上限を超えています", err,
+			))
+			return
+		}
+		apierror.Write(w, r, err)
 		return
 	}
 
 	// ファイルアップロード
 	fileMeta, presignedURL, err := h.fileService.UploadImage(r.Context(), userID, file, header)
 	if err != nil {
-		sendErrorResponse(w, http.StatusInternalServerError, "Failed to upload image", err.Error())
+		apierror.Write(w, r, apierror.NewInternal(
+			fmt.Errorf("failed to upload image: %w", err),
+		))
 		return
 	}
 
@@ -173,9 +182,7 @@ func (h *UploadHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 		Message:  "Image uploaded successfully",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	apierror.WriteJSON(w, http.StatusOK, response)
 }
 
 // GetPresignedURL は ファイルの署名付きURLを取得するハンドラー
@@ -183,7 +190,9 @@ func (h *UploadHandler) GetPresignedURL(w http.ResponseWriter, r *http.Request) 
 	// ユーザーIDを取得
 	userID := middleware.GetUserIDFromContext(r.Context())
 	if userID == 0 {
-		sendErrorResponse(w, http.StatusUnauthorized, "Unauthorized", "User not authenticated")
+		apierror.Write(w, r, apierror.NewUnauthorized(
+			"UNAUTHORIZED", "認証が必要です", nil,
+		))
 		return
 	}
 
@@ -192,25 +201,20 @@ func (h *UploadHandler) GetPresignedURL(w http.ResponseWriter, r *http.Request) 
 	fileIDStr := vars["id"]
 	fileID, err := strconv.Atoi(fileIDStr)
 	if err != nil {
-		sendErrorResponse(w, http.StatusBadRequest, "Invalid file ID", "File ID must be a number")
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_FILE_ID", "ファイルIDは数値である必要があります", err,
+		))
 		return
 	}
 
-	// 署名付きURLを取得
+	// 署名付きURLを取得（repository からの ErrNotFound は自動で 404 にマップされる）
 	presignedURL, err := h.fileService.GetPresignedURL(r.Context(), fileID, userID)
 	if err != nil {
-		sendErrorResponse(w, http.StatusInternalServerError, "Failed to get presigned URL", err.Error())
+		apierror.Write(w, r, err)
 		return
 	}
 
-	// レスポンス
-	response := PresignedURLResponse{
-		URL: presignedURL,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	apierror.WriteJSON(w, http.StatusOK, PresignedURLResponse{URL: presignedURL})
 }
 
 // GetStorageUsage は ユーザーのストレージ使用量を取得するハンドラー
@@ -218,14 +222,18 @@ func (h *UploadHandler) GetStorageUsage(w http.ResponseWriter, r *http.Request) 
 	// ユーザーIDを取得
 	userID := middleware.GetUserIDFromContext(r.Context())
 	if userID == 0 {
-		sendErrorResponse(w, http.StatusUnauthorized, "Unauthorized", "User not authenticated")
+		apierror.Write(w, r, apierror.NewUnauthorized(
+			"UNAUTHORIZED", "認証が必要です", nil,
+		))
 		return
 	}
 
 	// ストレージ使用量を取得
 	usage, err := h.fileService.GetUserStorageUsage(r.Context(), userID)
 	if err != nil {
-		sendErrorResponse(w, http.StatusInternalServerError, "Failed to get storage usage", err.Error())
+		apierror.Write(w, r, apierror.NewInternal(
+			fmt.Errorf("failed to get storage usage: %w", err),
+		))
 		return
 	}
 
@@ -235,8 +243,7 @@ func (h *UploadHandler) GetStorageUsage(w http.ResponseWriter, r *http.Request) 
 		usageRate = (float64(usage.TotalBytes) / float64(h.userStorageQuota)) * 100
 	}
 
-	// レスポンス
-	response := StorageUsageResponse{
+	apierror.WriteJSON(w, http.StatusOK, StorageUsageResponse{
 		UserID:     usage.UserID,
 		FileCount:  usage.FileCount,
 		TotalBytes: usage.TotalBytes,
@@ -244,11 +251,7 @@ func (h *UploadHandler) GetStorageUsage(w http.ResponseWriter, r *http.Request) 
 		QuotaBytes: h.userStorageQuota,
 		QuotaMB:    float64(h.userStorageQuota) / (1024 * 1024),
 		UsageRate:  usageRate,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	})
 }
 
 // ServeFile は ストレージからファイルを配信するハンドラー（プロキシ方式）
@@ -258,17 +261,19 @@ func (h *UploadHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 	filename := vars["filename"]
 
 	// データベースから検索してファイルメタデータを取得
+	// repository からの ErrNotFound は apierror.Write 内で自動的に 404 にマップされる
 	fileMeta, err := h.fileService.GetFileMetadataByFilename(r.Context(), filename)
 	if err != nil {
-		// ファイルが見つからない場合は404を返す
-		http.Error(w, "File not found", http.StatusNotFound)
+		apierror.Write(w, r, err)
 		return
 	}
 
 	// ストレージからファイルを取得
 	object, err := h.fileService.GetFileObject(r.Context(), fileMeta.FileKey)
 	if err != nil {
-		http.Error(w, "Failed to retrieve file", http.StatusInternalServerError)
+		apierror.Write(w, r, apierror.NewInternal(
+			fmt.Errorf("failed to retrieve file: %w", err),
+		))
 		return
 	}
 	defer object.Close()
@@ -279,22 +284,7 @@ func (h *UploadHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 
 	// ファイルをストリーミング
 	if _, err := io.Copy(w, object); err != nil {
-		// エラーログを出力するが、レスポンスは既に開始されている可能性があるため何もしない
+		// ヘッダー送信済みのためレスポンスは書き換えられない。ログのみ残す
 		return
 	}
-}
-
-// ヘルパー関数
-
-// sendErrorResponse は エラーレスポンスを送信します
-func sendErrorResponse(w http.ResponseWriter, statusCode int, error, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	response := ErrorResponse{
-		Error:   error,
-		Message: message,
-	}
-
-	json.NewEncoder(w).Encode(response)
 }

@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	"simple-notion-backend/internal/apierror"
 )
 
 type contextKey string
@@ -21,13 +23,21 @@ func AuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 				// Authorizationヘッダーからも試行
 				authHeader := r.Header.Get("Authorization")
 				if authHeader == "" {
-					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					apierror.Write(w, r, apierror.NewUnauthorized(
+						"NO_AUTH_TOKEN",
+						"認証トークンが必要です",
+						nil,
+					))
 					return
 				}
 
 				tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 				if tokenString == authHeader {
-					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					apierror.Write(w, r, apierror.NewUnauthorized(
+						"INVALID_AUTH_HEADER",
+						"Authorization ヘッダーの形式が不正です",
+						nil,
+					))
 					return
 				}
 				cookie = &http.Cookie{Value: tokenString}
@@ -42,19 +52,31 @@ func AuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 			})
 
 			if err != nil || !token.Valid {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				apierror.Write(w, r, apierror.NewUnauthorized(
+					"INVALID_TOKEN",
+					"トークンが無効または期限切れです",
+					err,
+				))
 				return
 			}
 
 			claims, ok := token.Claims.(jwt.MapClaims)
 			if !ok {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				apierror.Write(w, r, apierror.NewUnauthorized(
+					"INVALID_TOKEN_CLAIMS",
+					"トークンのクレームが不正です",
+					nil,
+				))
 				return
 			}
 
 			userID, ok := claims["user_id"].(float64)
 			if !ok {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				apierror.Write(w, r, apierror.NewUnauthorized(
+					"INVALID_USER_ID_CLAIM",
+					"ユーザーIDクレームが不正です",
+					nil,
+				))
 				return
 			}
 

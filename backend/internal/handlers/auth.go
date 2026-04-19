@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/config"
 	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/models"
@@ -86,18 +88,26 @@ func (h *AuthHandler) createSecureCookie(name, value string, maxAge int) *http.C
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_REQUEST", "リクエストボディが不正です", err,
+		))
 		return
 	}
 
+	// 認証失敗時は「メールが存在しない」と「パスワード不一致」を区別せず同じレスポンスを返す
+	// （メール列挙攻撃を防ぐ）
 	user, err := h.userRepo.GetByEmail(req.Email)
 	if err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		apierror.Write(w, r, apierror.NewUnauthorized(
+			"INVALID_CREDENTIALS", "メールアドレスまたはパスワードが正しくありません", err,
+		))
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		apierror.Write(w, r, apierror.NewUnauthorized(
+			"INVALID_CREDENTIALS", "メールアドレスまたはパスワードが正しくありません", err,
+		))
 		return
 	}
 
@@ -109,7 +119,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	tokenString, err := token.SignedString(h.jwtSecret)
 	if err != nil {
-		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		apierror.Write(w, r, apierror.NewInternal(err))
 		return
 	}
 
@@ -117,8 +127,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	cookie := h.createSecureCookie("auth_token", tokenString, 86400) // 24時間
 	http.SetCookie(w, cookie)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	apierror.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"user":  user,
 		"token": tokenString,
 	})
@@ -127,19 +136,23 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_REQUEST", "リクエストボディが不正です", err,
+		))
 		return
 	}
 
 	// パスワードの基本検証
 	if len(req.Password) < 6 {
-		http.Error(w, "Password must be at least 6 characters", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"PASSWORD_TOO_SHORT", "パスワードは6文字以上で入力してください", nil,
+		))
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+		apierror.Write(w, r, apierror.NewInternal(err))
 		return
 	}
 
@@ -150,7 +163,14 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.userRepo.Create(user); err != nil {
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		// UNIQUE 制約違反（email 重複）は 409 Conflict として返す
+		if errors.Is(err, apierror.ErrConflict) {
+			apierror.Write(w, r, apierror.NewConflict(
+				"EMAIL_ALREADY_EXISTS", "このメールアドレスは既に登録されています", err,
+			))
+			return
+		}
+		apierror.Write(w, r, apierror.NewInternal(err))
 		return
 	}
 
@@ -163,7 +183,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	tokenString, err := token.SignedString(h.jwtSecret)
 	if err != nil {
-		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		apierror.Write(w, r, apierror.NewInternal(err))
 		return
 	}
 
@@ -171,9 +191,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	cookie := h.createSecureCookie("auth_token", tokenString, 86400) // 24時間
 	http.SetCookie(w, cookie)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	apierror.WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"user":  user,
 		"token": tokenString,
 	})
@@ -190,18 +208,25 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserIDFromContext(r.Context())
 	if userID == 0 {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		apierror.Write(w, r, apierror.NewUnauthorized(
+			"UNAUTHORIZED", "認証が必要です", nil,
+		))
 		return
 	}
 
 	user, err := h.userRepo.GetByID(userID)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		if errors.Is(err, apierror.ErrNotFound) {
+			apierror.Write(w, r, apierror.NewNotFound(
+				"USER_NOT_FOUND", "ユーザーが見つかりません", err,
+			))
+			return
+		}
+		apierror.Write(w, r, apierror.NewInternal(err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	apierror.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"user": user,
 	})
 }

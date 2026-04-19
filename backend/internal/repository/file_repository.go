@@ -3,8 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/models"
 )
 
@@ -80,8 +82,8 @@ func (r *FileRepository) GetByID(ctx context.Context, id int) (*models.FileMetad
 		&row.DeletedAt,
 	)
 
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("file metadata not found: id=%d", id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("file metadata id=%d: %w", id, apierror.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file metadata: %w", err)
@@ -119,8 +121,8 @@ func (r *FileRepository) GetByFileKey(ctx context.Context, fileKey string) (*mod
 		&row.DeletedAt,
 	)
 
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("file metadata not found: fileKey=%s", fileKey)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("file metadata fileKey=%s: %w", fileKey, apierror.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file metadata: %w", err)
@@ -158,8 +160,8 @@ func (r *FileRepository) GetByBlockID(ctx context.Context, blockID int) (*models
 		&row.DeletedAt,
 	)
 
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("file metadata not found: blockID=%d", blockID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("file metadata blockID=%d: %w", blockID, apierror.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file metadata: %w", err)
@@ -234,7 +236,7 @@ func (r *FileRepository) UpdateStatus(ctx context.Context, id int, status string
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("file metadata not found: id=%d", id)
+		return fmt.Errorf("file metadata id=%d: %w", id, apierror.ErrNotFound)
 	}
 
 	return nil
@@ -259,7 +261,7 @@ func (r *FileRepository) MarkAsDeleted(ctx context.Context, id int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("file metadata not found: id=%d", id)
+		return fmt.Errorf("file metadata id=%d: %w", id, apierror.ErrNotFound)
 	}
 
 	return nil
@@ -326,7 +328,7 @@ func (r *FileRepository) GetUserStorageUsage(ctx context.Context, userID int) (*
 		&usage.TotalMB,
 	)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		// ユーザーがファイルをアップロードしていない場合はゼロを返す
 		return &models.UserStorageUsage{
 			UserID:     userID,
@@ -361,7 +363,7 @@ func (r *FileRepository) UpdateBlockID(ctx context.Context, fileID int, blockID 
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("file metadata not found: id=%d", fileID)
+		return fmt.Errorf("file metadata id=%d: %w", fileID, apierror.ErrNotFound)
 	}
 
 	return nil
@@ -400,8 +402,8 @@ func (r *FileRepository) GetByFilename(ctx context.Context, filename string) (*m
 		&row.DeletedAt,
 	)
 
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("file metadata not found: filename=%s", filename)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("file metadata filename=%s: %w", filename, apierror.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file metadata: %w", err)

@@ -3,9 +3,8 @@ package handlers
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,13 +12,11 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/config"
 	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/models"
 )
-
-// エラー定義
-var ErrUserExists = errors.New("user already exists")
 
 // createTestConfig は セキュリティ設定を無効にしたテスト用設定を作成します
 func createTestConfig() *config.Config {
@@ -31,7 +28,9 @@ func createTestConfig() *config.Config {
 	}
 }
 
-// MockUserRepository は UserRepository のモック実装
+// MockUserRepository は UserRepository のモック実装。
+// 本番の UserRepository と同様、存在しないレコードは apierror.ErrNotFound、
+// UNIQUE 制約違反は apierror.ErrConflict をラップしたエラーを返す。
 type MockUserRepository struct {
 	users     map[string]*models.User
 	usersByID map[int]*models.User
@@ -49,7 +48,7 @@ func NewMockUserRepository() *MockUserRepository {
 func (m *MockUserRepository) GetByEmail(email string) (*models.User, error) {
 	user, exists := m.users[email]
 	if !exists {
-		return nil, sql.ErrNoRows
+		return nil, fmt.Errorf("user email=%s: %w", email, apierror.ErrNotFound)
 	}
 	return user, nil
 }
@@ -57,15 +56,15 @@ func (m *MockUserRepository) GetByEmail(email string) (*models.User, error) {
 func (m *MockUserRepository) GetByID(id int) (*models.User, error) {
 	user, exists := m.usersByID[id]
 	if !exists {
-		return nil, sql.ErrNoRows
+		return nil, fmt.Errorf("user id=%d: %w", id, apierror.ErrNotFound)
 	}
 	return user, nil
 }
 
 func (m *MockUserRepository) Create(user *models.User) error {
-	// 既存のユーザーチェック
+	// UNIQUE 制約違反を模す
 	if _, exists := m.users[user.Email]; exists {
-		return ErrUserExists
+		return fmt.Errorf("user email=%s: %w", user.Email, apierror.ErrConflict)
 	}
 
 	user.ID = m.nextID
@@ -81,7 +80,7 @@ func (m *MockUserRepository) Create(user *models.User) error {
 
 func (m *MockUserRepository) Update(user *models.User) error {
 	if _, exists := m.usersByID[user.ID]; !exists {
-		return sql.ErrNoRows
+		return fmt.Errorf("user id=%d: %w", user.ID, apierror.ErrNotFound)
 	}
 
 	user.UpdatedAt = time.Now()
@@ -89,6 +88,16 @@ func (m *MockUserRepository) Update(user *models.User) error {
 	m.usersByID[user.ID] = user
 
 	return nil
+}
+
+// decodeErrorResponse はレスポンスボディを apierror.ErrorResponse にデコードする
+func decodeErrorResponse(t *testing.T, body *bytes.Buffer) apierror.ErrorResponse {
+	t.Helper()
+	var resp apierror.ErrorResponse
+	if err := json.Unmarshal(body.Bytes(), &resp); err != nil {
+		t.Fatalf("エラーレスポンスの JSON デコードに失敗: %v (body=%s)", err, body.String())
+	}
+	return resp
 }
 
 func TestAuthHandler_Login(t *testing.T) {
@@ -169,6 +178,9 @@ func TestAuthHandler_Login(t *testing.T) {
 		if w.Code != http.StatusUnauthorized {
 			t.Errorf("Expected status code 401, got %d", w.Code)
 		}
+		if resp := decodeErrorResponse(t, w.Body); resp.Error != "INVALID_CREDENTIALS" {
+			t.Errorf("Expected error code INVALID_CREDENTIALS, got %s", resp.Error)
+		}
 	})
 
 	t.Run("invalid password", func(t *testing.T) {
@@ -187,6 +199,9 @@ func TestAuthHandler_Login(t *testing.T) {
 		if w.Code != http.StatusUnauthorized {
 			t.Errorf("Expected status code 401, got %d", w.Code)
 		}
+		if resp := decodeErrorResponse(t, w.Body); resp.Error != "INVALID_CREDENTIALS" {
+			t.Errorf("Expected error code INVALID_CREDENTIALS, got %s", resp.Error)
+		}
 	})
 
 	t.Run("invalid JSON", func(t *testing.T) {
@@ -198,6 +213,9 @@ func TestAuthHandler_Login(t *testing.T) {
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Expected status code 400, got %d", w.Code)
+		}
+		if resp := decodeErrorResponse(t, w.Body); resp.Error != "INVALID_REQUEST" {
+			t.Errorf("Expected error code INVALID_REQUEST, got %s", resp.Error)
 		}
 	})
 }
@@ -264,6 +282,9 @@ func TestAuthHandler_Register(t *testing.T) {
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Expected status code 400, got %d", w.Code)
 		}
+		if resp := decodeErrorResponse(t, w.Body); resp.Error != "PASSWORD_TOO_SHORT" {
+			t.Errorf("Expected error code PASSWORD_TOO_SHORT, got %s", resp.Error)
+		}
 	})
 
 	t.Run("duplicate email", func(t *testing.T) {
@@ -288,8 +309,12 @@ func TestAuthHandler_Register(t *testing.T) {
 
 		handler.Register(w, req)
 
-		if w.Code != http.StatusInternalServerError {
-			t.Errorf("Expected status code 500, got %d", w.Code)
+		// 破壊的変更: 500 → 409 Conflict に変更
+		if w.Code != http.StatusConflict {
+			t.Errorf("Expected status code 409, got %d", w.Code)
+		}
+		if resp := decodeErrorResponse(t, w.Body); resp.Error != "EMAIL_ALREADY_EXISTS" {
+			t.Errorf("Expected error code EMAIL_ALREADY_EXISTS, got %s", resp.Error)
 		}
 	})
 
@@ -385,6 +410,9 @@ func TestAuthHandler_Me(t *testing.T) {
 		if w.Code != http.StatusUnauthorized {
 			t.Errorf("Expected status code 401, got %d", w.Code)
 		}
+		if resp := decodeErrorResponse(t, w.Body); resp.Error != "UNAUTHORIZED" {
+			t.Errorf("Expected error code UNAUTHORIZED, got %s", resp.Error)
+		}
 	})
 
 	t.Run("user not found", func(t *testing.T) {
@@ -400,6 +428,9 @@ func TestAuthHandler_Me(t *testing.T) {
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Expected status code 404, got %d", w.Code)
+		}
+		if resp := decodeErrorResponse(t, w.Body); resp.Error != "USER_NOT_FOUND" {
+			t.Errorf("Expected error code USER_NOT_FOUND, got %s", resp.Error)
 		}
 	})
 }
