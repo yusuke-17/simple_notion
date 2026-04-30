@@ -288,7 +288,7 @@ make fresh-dev  # クリーンな開発環境構築
 - [x] エラーハンドリングの統一（カスタムエラー型 `apierror.AppError`、`apierror.Write` による JSON レスポンス統一）
     - 基盤 `internal/apierror` パッケージ、repository 層の sentinel ラップ、`middleware/auth`、`handlers/upload`、`handlers/auth` まで統一済み
     - 後続 PR 推奨:
-        - [ ] document 系 handler の移行（`handlers/document/*.go` に残る `http.Error` を `apierror.Write` に置換、409/403/404 の使い分け明確化）
+        - [×] document 系 handler の移行（`handlers/document/*.go` に残る `http.Error` を `apierror.Write` に置換、409/403/404 の使い分け明確化）
         - [ ] service 層で repository の sentinel を `*AppError` に昇格（403 vs 404 の精度向上、業務ルール違反エラーの追加）
         - [ ] 構造化ログ（`slog`）への移行と `apierror.Write` 内部ロガーの差し替え
 - [ ] テストカバレッジの強化（handler 層・service 層のユニットテスト）

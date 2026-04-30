@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/models"
 )
@@ -17,7 +18,9 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 	vars := mux.Vars(r)
 	docID, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid document ID", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_DOCUMENT_ID", "ドキュメントIDが不正です", err,
+		))
 		return
 	}
 
@@ -28,13 +31,17 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_REQUEST", "リクエストボディが不正です", err,
+		))
 		return
 	}
 
 	// 該当する場合はリッチテキストJSONを検証
 	if err := ValidateRichTextJSON(req.Content); err != nil {
-		http.Error(w, "Invalid rich text content", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_RICH_TEXT", "リッチテキスト形式が不正です", err,
+		))
 		return
 	}
 
@@ -49,28 +56,29 @@ func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request)
 		// json.RawMessageは[]byte型なので、string()で変換
 		contentStr := string(block.Content)
 		if err := ValidateRichTextJSON(contentStr); err != nil {
-			http.Error(w, fmt.Sprintf("Invalid rich text content in block %d", i), http.StatusBadRequest)
+			apierror.Write(w, r, apierror.NewValidationError(
+				"INVALID_RICH_TEXT_BLOCK",
+				fmt.Sprintf("ブロック %d のリッチテキスト形式が不正です", i),
+				err,
+			))
 			return
 		}
 	}
 
 	// ドキュメントとブロックを統合更新
+	// service 層が ErrNotFound / ErrForbidden / ErrConflict を返す場合は
+	// apierror.Write が適切な 404/403/409 に自動変換する
 	if err := h.DocumentService.UpdateDocumentWithBlocks(docID, userID, req.Title, req.Content, req.Blocks); err != nil {
-		http.Error(w, "Failed to update document", http.StatusInternalServerError)
+		apierror.Write(w, r, err)
 		return
 	}
 
 	// 更新されたドキュメントを取得して返す
 	updatedDoc, err := h.DocumentService.GetDocumentWithBlocks(docID, userID)
 	if err != nil {
-		http.Error(w, "Failed to retrieve updated document", http.StatusInternalServerError)
+		apierror.Write(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(updatedDoc); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	apierror.WriteJSON(w, http.StatusOK, updatedDoc)
 }

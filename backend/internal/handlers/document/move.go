@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/middleware"
 )
 
@@ -15,7 +16,9 @@ func (h *DocumentHandler) MoveDocument(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	docID, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid document ID", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_DOCUMENT_ID", "ドキュメントIDが不正です", err,
+		))
 		return
 	}
 
@@ -24,23 +27,24 @@ func (h *DocumentHandler) MoveDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_REQUEST", "リクエストボディが不正です", err,
+		))
 		return
 	}
 
+	// service 層は循環参照や自身を親に設定するケースで ErrForbidden を返す
 	if err := h.DocumentService.MoveDocument(docID, req.NewParentID, userID); err != nil {
-		http.Error(w, "Failed to move document", http.StatusInternalServerError)
+		apierror.Write(w, r, err)
 		return
 	}
 
 	// 移動されたドキュメントを取得して返す
 	movedDoc, err := h.DocumentService.GetDocumentWithBlocks(docID, userID)
 	if err != nil {
-		http.Error(w, "Failed to retrieve moved document", http.StatusInternalServerError)
+		apierror.Write(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(movedDoc)
+	apierror.WriteJSON(w, http.StatusOK, movedDoc)
 }

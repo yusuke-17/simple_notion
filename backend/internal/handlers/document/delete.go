@@ -1,12 +1,12 @@
 package document
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/middleware"
 )
 
@@ -15,21 +15,19 @@ func (h *DocumentHandler) DeleteDocument(w http.ResponseWriter, r *http.Request)
 	vars := mux.Vars(r)
 	docID, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid document ID", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_DOCUMENT_ID", "ドキュメントIDが不正です", err,
+		))
 		return
 	}
 
+	// 該当文書が存在しなければ 404、既にゴミ箱なら 409 (service 層が ErrConflict を返す)
 	if err := h.DocumentService.SoftDeleteDocument(docID, userID); err != nil {
-		http.Error(w, "Failed to delete document", http.StatusInternalServerError)
+		apierror.Write(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string]string{"message": "Document deleted successfully"}); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	apierror.WriteJSON(w, http.StatusOK, map[string]string{"message": "Document deleted successfully"})
 }
 
 func (h *DocumentHandler) RestoreDocument(w http.ResponseWriter, r *http.Request) {
@@ -37,12 +35,15 @@ func (h *DocumentHandler) RestoreDocument(w http.ResponseWriter, r *http.Request
 	vars := mux.Vars(r)
 	docID, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid document ID", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_DOCUMENT_ID", "ドキュメントIDが不正です", err,
+		))
 		return
 	}
 
+	// ゴミ箱にない文書の復元は 409 (ErrConflict)
 	if err := h.DocumentService.RestoreDocument(docID, userID); err != nil {
-		http.Error(w, "Failed to restore document", http.StatusInternalServerError)
+		apierror.Write(w, r, err)
 		return
 	}
 
@@ -54,19 +55,17 @@ func (h *DocumentHandler) PermanentDeleteDocument(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 	docID, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid document ID", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_DOCUMENT_ID", "ドキュメントIDが不正です", err,
+		))
 		return
 	}
 
+	// ゴミ箱に入っていない文書の完全削除は 409 (ErrConflict)
 	if err := h.DocumentService.PermanentDeleteDocument(docID, userID); err != nil {
-		http.Error(w, "Failed to permanently delete document", http.StatusInternalServerError)
+		apierror.Write(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string]string{"message": "Document permanently deleted"}); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	apierror.WriteJSON(w, http.StatusOK, map[string]string{"message": "Document permanently deleted"})
 }

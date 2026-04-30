@@ -1,12 +1,12 @@
 package document
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/models"
 )
@@ -16,15 +16,11 @@ func (h *DocumentHandler) GetDocumentTree(w http.ResponseWriter, r *http.Request
 
 	tree, err := h.DocumentService.GetDocumentTree(userID)
 	if err != nil {
-		http.Error(w, "Failed to load documents", http.StatusInternalServerError)
+		apierror.Write(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(tree); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	apierror.WriteJSON(w, http.StatusOK, tree)
 }
 
 func (h *DocumentHandler) GetDocument(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +28,9 @@ func (h *DocumentHandler) GetDocument(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	docID, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid document ID", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_DOCUMENT_ID", "ドキュメントIDが不正です", err,
+		))
 		return
 	}
 
@@ -47,15 +45,12 @@ func (h *DocumentHandler) GetDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, "Document not found", http.StatusNotFound)
+		// ErrNotFound（自分のドキュメントが存在しない／他人のドキュメント）は 404
+		apierror.Write(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(doc); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	apierror.WriteJSON(w, http.StatusOK, doc)
 }
 
 func (h *DocumentHandler) GetDocuments(w http.ResponseWriter, r *http.Request) {
@@ -65,26 +60,18 @@ func (h *DocumentHandler) GetDocuments(w http.ResponseWriter, r *http.Request) {
 	if deleted {
 		docs, err := h.DocumentService.GetTrashedDocuments(userID)
 		if err != nil {
-			http.Error(w, "Failed to load trashed documents", http.StatusInternalServerError)
+			apierror.Write(w, r, err)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(docs); err != nil {
-			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-			return
-		}
+		apierror.WriteJSON(w, http.StatusOK, docs)
 		return
 	}
 
 	tree, err := h.DocumentService.GetDocumentTree(userID)
 	if err != nil {
-		http.Error(w, "Failed to load documents", http.StatusInternalServerError)
+		apierror.Write(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(tree); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	apierror.WriteJSON(w, http.StatusOK, tree)
 }

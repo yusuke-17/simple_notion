@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/models"
 )
 
@@ -379,6 +380,9 @@ func TestUpdateDocumentWithBlocks(t *testing.T) {
 				},
 			},
 			setupMocks: func(docRepo *MockDocumentCoreRepository, blockRepo *MockBlockRepository) {
+				docRepo.GetDocumentFunc = func(docID, userID int) (*models.Document, error) {
+					return &models.Document{ID: docID, UserID: userID}, nil
+				}
 				docRepo.UpdateDocumentFunc = func(docID, userID int, title, content string) error {
 					return nil
 				}
@@ -396,6 +400,9 @@ func TestUpdateDocumentWithBlocks(t *testing.T) {
 			content: "更新後の内容",
 			blocks:  []models.Block{},
 			setupMocks: func(docRepo *MockDocumentCoreRepository, blockRepo *MockBlockRepository) {
+				docRepo.GetDocumentFunc = func(docID, userID int) (*models.Document, error) {
+					return &models.Document{ID: docID, UserID: userID}, nil
+				}
 				docRepo.UpdateDocumentFunc = func(docID, userID int, title, content string) error {
 					return errors.New("update failed")
 				}
@@ -411,6 +418,9 @@ func TestUpdateDocumentWithBlocks(t *testing.T) {
 			content: "更新後の内容",
 			blocks:  []models.Block{},
 			setupMocks: func(docRepo *MockDocumentCoreRepository, blockRepo *MockBlockRepository) {
+				docRepo.GetDocumentFunc = func(docID, userID int) (*models.Document, error) {
+					return &models.Document{ID: docID, UserID: userID}, nil
+				}
 				docRepo.UpdateDocumentFunc = func(docID, userID int, title, content string) error {
 					return nil
 				}
@@ -420,6 +430,21 @@ func TestUpdateDocumentWithBlocks(t *testing.T) {
 			},
 			wantErr: true,
 			errMsg:  "failed to update blocks",
+		},
+		{
+			name:    "異常系：対象文書が存在しない（404）",
+			docID:   999,
+			userID:  10,
+			title:   "更新後のタイトル",
+			content: "更新後の内容",
+			blocks:  []models.Block{},
+			setupMocks: func(docRepo *MockDocumentCoreRepository, blockRepo *MockBlockRepository) {
+				docRepo.GetDocumentFunc = func(docID, userID int) (*models.Document, error) {
+					return nil, apierror.ErrNotFound
+				}
+			},
+			wantErr: true,
+			errMsg:  "failed to update document",
 		},
 	}
 
@@ -444,19 +469,25 @@ func TestUpdateDocumentWithBlocks(t *testing.T) {
 }
 
 // TestSoftDeleteDocument - 論理削除のテスト
+// service 層が GetDocumentIncludingDeleted で状態を確認するため、
+// 取得結果の IsDeleted を切り替えて 404 / 409 / 正常系を検証する。
 func TestSoftDeleteDocument(t *testing.T) {
 	tests := []struct {
-		name      string
-		docID     int
-		userID    int
-		setupMock func(*MockDocumentTrashRepository)
-		wantErr   bool
+		name        string
+		docID       int
+		userID      int
+		setupMocks  func(*MockDocumentCoreRepository, *MockDocumentTrashRepository)
+		wantErr     bool
+		wantErrType error
 	}{
 		{
 			name:   "正常系：論理削除成功",
 			docID:  1,
 			userID: 10,
-			setupMock: func(trashRepo *MockDocumentTrashRepository) {
+			setupMocks: func(docRepo *MockDocumentCoreRepository, trashRepo *MockDocumentTrashRepository) {
+				docRepo.GetDocumentIncludingDeletedFunc = func(docID, userID int) (*models.Document, error) {
+					return &models.Document{ID: docID, UserID: userID, IsDeleted: false}, nil
+				}
 				trashRepo.SoftDeleteDocumentFunc = func(docID, userID int) error {
 					return nil
 				}
@@ -464,51 +495,70 @@ func TestSoftDeleteDocument(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "異常系：論理削除失敗",
+			name:   "異常系：文書が存在しない（404）",
 			docID:  999,
 			userID: 10,
-			setupMock: func(trashRepo *MockDocumentTrashRepository) {
-				trashRepo.SoftDeleteDocumentFunc = func(docID, userID int) error {
-					return errors.New("document not found")
+			setupMocks: func(docRepo *MockDocumentCoreRepository, trashRepo *MockDocumentTrashRepository) {
+				docRepo.GetDocumentIncludingDeletedFunc = func(docID, userID int) (*models.Document, error) {
+					return nil, apierror.ErrNotFound
 				}
 			},
-			wantErr: true,
+			wantErr:     true,
+			wantErrType: apierror.ErrNotFound,
+		},
+		{
+			name:   "異常系：既にゴミ箱内のため 409",
+			docID:  1,
+			userID: 10,
+			setupMocks: func(docRepo *MockDocumentCoreRepository, trashRepo *MockDocumentTrashRepository) {
+				docRepo.GetDocumentIncludingDeletedFunc = func(docID, userID int) (*models.Document, error) {
+					return &models.Document{ID: docID, UserID: userID, IsDeleted: true}, nil
+				}
+			},
+			wantErr:     true,
+			wantErrType: apierror.ErrConflict,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// モックリポジトリのセットアップ
+			docRepo := &MockDocumentCoreRepository{}
 			trashRepo := &MockDocumentTrashRepository{}
-			tt.setupMock(trashRepo)
+			tt.setupMocks(docRepo, trashRepo)
 
-			service := NewDocumentService(nil, nil, nil, trashRepo)
+			service := NewDocumentService(docRepo, nil, nil, trashRepo)
 
-			// テスト実行
 			err := service.SoftDeleteDocument(tt.docID, tt.userID)
 
-			// エラーの検証
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SoftDeleteDocument() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErrType != nil && !errors.Is(err, tt.wantErrType) {
+				t.Errorf("SoftDeleteDocument() error type = %v, want %v", err, tt.wantErrType)
 			}
 		})
 	}
 }
 
 // TestRestoreDocument - 復元のテスト
+// ゴミ箱に入っていない文書の復元は ErrConflict で 409 を返す。
 func TestRestoreDocument(t *testing.T) {
 	tests := []struct {
-		name      string
-		docID     int
-		userID    int
-		setupMock func(*MockDocumentTrashRepository)
-		wantErr   bool
+		name        string
+		docID       int
+		userID      int
+		setupMocks  func(*MockDocumentCoreRepository, *MockDocumentTrashRepository)
+		wantErr     bool
+		wantErrType error
 	}{
 		{
 			name:   "正常系：復元成功",
 			docID:  1,
 			userID: 10,
-			setupMock: func(trashRepo *MockDocumentTrashRepository) {
+			setupMocks: func(docRepo *MockDocumentCoreRepository, trashRepo *MockDocumentTrashRepository) {
+				docRepo.GetDocumentIncludingDeletedFunc = func(docID, userID int) (*models.Document, error) {
+					return &models.Document{ID: docID, UserID: userID, IsDeleted: true}, nil
+				}
 				trashRepo.RestoreDocumentFunc = func(docID, userID int) error {
 					return nil
 				}
@@ -516,32 +566,136 @@ func TestRestoreDocument(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "異常系：復元失敗",
+			name:   "異常系：文書が存在しない（404）",
 			docID:  999,
 			userID: 10,
-			setupMock: func(trashRepo *MockDocumentTrashRepository) {
-				trashRepo.RestoreDocumentFunc = func(docID, userID int) error {
-					return errors.New("document not found in trash")
+			setupMocks: func(docRepo *MockDocumentCoreRepository, trashRepo *MockDocumentTrashRepository) {
+				docRepo.GetDocumentIncludingDeletedFunc = func(docID, userID int) (*models.Document, error) {
+					return nil, apierror.ErrNotFound
 				}
 			},
-			wantErr: true,
+			wantErr:     true,
+			wantErrType: apierror.ErrNotFound,
+		},
+		{
+			name:   "異常系：ゴミ箱に入っていないため 409",
+			docID:  1,
+			userID: 10,
+			setupMocks: func(docRepo *MockDocumentCoreRepository, trashRepo *MockDocumentTrashRepository) {
+				docRepo.GetDocumentIncludingDeletedFunc = func(docID, userID int) (*models.Document, error) {
+					return &models.Document{ID: docID, UserID: userID, IsDeleted: false}, nil
+				}
+			},
+			wantErr:     true,
+			wantErrType: apierror.ErrConflict,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// モックリポジトリのセットアップ
+			docRepo := &MockDocumentCoreRepository{}
 			trashRepo := &MockDocumentTrashRepository{}
-			tt.setupMock(trashRepo)
+			tt.setupMocks(docRepo, trashRepo)
 
-			service := NewDocumentService(nil, nil, nil, trashRepo)
+			service := NewDocumentService(docRepo, nil, nil, trashRepo)
 
-			// テスト実行
 			err := service.RestoreDocument(tt.docID, tt.userID)
 
-			// エラーの検証
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RestoreDocument() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErrType != nil && !errors.Is(err, tt.wantErrType) {
+				t.Errorf("RestoreDocument() error type = %v, want %v", err, tt.wantErrType)
+			}
+		})
+	}
+}
+
+// TestMoveDocument_Cycle - 循環参照／自身を親にする操作が ErrForbidden になることを確認
+func TestMoveDocument_Cycle(t *testing.T) {
+	intPtr := func(n int) *int { return &n }
+
+	tests := []struct {
+		name        string
+		docID       int
+		newParent   *int
+		userID      int
+		setupMocks  func(*MockDocumentCoreRepository, *MockDocumentTreeRepository)
+		wantErr     bool
+		wantErrType error
+	}{
+		{
+			name:      "異常系：自身を親に設定 → 403",
+			docID:     5,
+			newParent: intPtr(5),
+			userID:    10,
+			setupMocks: func(docRepo *MockDocumentCoreRepository, treeRepo *MockDocumentTreeRepository) {
+				docRepo.GetDocumentFunc = func(docID, userID int) (*models.Document, error) {
+					return &models.Document{ID: docID, UserID: userID}, nil
+				}
+			},
+			wantErr:     true,
+			wantErrType: apierror.ErrForbidden,
+		},
+		{
+			name:      "異常系：子孫を親に設定 → 403",
+			docID:     1,
+			newParent: intPtr(3),
+			userID:    10,
+			setupMocks: func(docRepo *MockDocumentCoreRepository, treeRepo *MockDocumentTreeRepository) {
+				// docID=1 -> child=2 -> grandchild=3 のツリー
+				docRepo.GetDocumentFunc = func(docID, userID int) (*models.Document, error) {
+					return &models.Document{ID: docID, UserID: userID}, nil
+				}
+				docRepo.GetAllDocumentsFunc = func(userID int) ([]models.Document, error) {
+					return []models.Document{
+						{ID: 1, UserID: userID, ParentID: nil},
+						{ID: 2, UserID: userID, ParentID: intPtr(1)},
+						{ID: 3, UserID: userID, ParentID: intPtr(2)},
+					}, nil
+				}
+			},
+			wantErr:     true,
+			wantErrType: apierror.ErrForbidden,
+		},
+		{
+			name:      "正常系：兄弟への移動",
+			docID:     2,
+			newParent: intPtr(4),
+			userID:    10,
+			setupMocks: func(docRepo *MockDocumentCoreRepository, treeRepo *MockDocumentTreeRepository) {
+				docRepo.GetDocumentFunc = func(docID, userID int) (*models.Document, error) {
+					return &models.Document{ID: docID, UserID: userID}, nil
+				}
+				docRepo.GetAllDocumentsFunc = func(userID int) ([]models.Document, error) {
+					return []models.Document{
+						{ID: 1, UserID: userID, ParentID: nil},
+						{ID: 2, UserID: userID, ParentID: intPtr(1)},
+						{ID: 4, UserID: userID, ParentID: nil},
+					}, nil
+				}
+				treeRepo.MoveDocumentFunc = func(docID int, newParentID *int, userID int) error {
+					return nil
+				}
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			docRepo := &MockDocumentCoreRepository{}
+			treeRepo := &MockDocumentTreeRepository{}
+			tt.setupMocks(docRepo, treeRepo)
+
+			service := NewDocumentService(docRepo, nil, treeRepo, nil)
+			err := service.MoveDocument(tt.docID, tt.newParent, tt.userID)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("MoveDocument() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErrType != nil && !errors.Is(err, tt.wantErrType) {
+				t.Errorf("MoveDocument() error type = %v, want %v", err, tt.wantErrType)
 			}
 		})
 	}

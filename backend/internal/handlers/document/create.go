@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"simple-notion-backend/internal/apierror"
 	"simple-notion-backend/internal/middleware"
 	"simple-notion-backend/internal/models"
 )
@@ -18,13 +19,17 @@ func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"INVALID_REQUEST", "リクエストボディが不正です", err,
+		))
 		return
 	}
 
 	// タイトルが空の場合はエラーを返す
 	if req.Title == "" {
-		http.Error(w, "Title is required", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.NewValidationError(
+			"TITLE_REQUIRED", "タイトルを入力してください", nil,
+		))
 		return
 	}
 
@@ -35,15 +40,11 @@ func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request)
 		Content:  req.Content,
 	}
 
+	// service 層から返る sentinel error は apierror.Write が自動で 404/409 等に変換する
 	if err := h.DocumentService.CreateDocument(doc); err != nil {
-		http.Error(w, "Failed to create document", http.StatusInternalServerError)
+		apierror.Write(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(doc); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	apierror.WriteJSON(w, http.StatusCreated, doc)
 }
